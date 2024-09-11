@@ -2,7 +2,7 @@ import os
 from fastapi import UploadFile
 from app.utils.file_utils import is_allowed_file
 
-UPLOAD_FOLDER = "uploads"
+UPLOAD_FOLDER = os.getenv("UPLOAD_FOLDER")
 
 
 async def save_uploaded_file(file: UploadFile) -> str:

@@ -39,12 +39,15 @@ async def chat(
                 shutil.copyfileobj(file.file, buffer)
             file_info = f"File attached: {file.filename} (size: {os.path.getsize(file_path)} bytes)"
 
+        # Menggabungkan pesan dan informasi file jika ada
         full_message = f"{message}\n\n{file_info}" if file_info else message
 
+        # Menggunakan StreamingResponse untuk mengalirkan respons dari model AI
         return StreamingResponse(
             chat_with_retry_stream(user_id, full_message),
             media_type="text/event-stream",
         )
+
     except Exception as e:
         logger.error(f"Error in chat endpoint: {str(e)}")
         raise HTTPException(

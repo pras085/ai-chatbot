@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { formatFileSize } from "../utils/helpers";
 
 /**
  * PreviewModal Component
@@ -34,19 +35,6 @@ function PreviewModal({ file, onClose }) {
   }, [file]);
 
   if (!file) return null;
-
-  /**
-   * Format ukuran file ke dalam bentuk yang mudah dibaca
-   * @param {number} bytes - Ukuran file dalam bytes
-   * @returns {string} Ukuran file yang diformat
-   */
-  function formatFileSize(bytes) {
-    if (bytes === 0) return "0 Bytes";
-    const k = 1024;
-    const sizes = ["Bytes", "KB", "MB", "GB", "TB"];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
-  }
 
   return (
     <div id="preview-modal" style={{ display: "block" }}>

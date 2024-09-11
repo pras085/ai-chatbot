@@ -1,42 +1,47 @@
+/* eslint-disable no-loop-func */
 import React, { useState, useCallback, useRef } from "react";
 import ChatMessages from "./ChatMessages";
 import UserInput from "./UserInput";
 import FileUpload from "./FileUpload";
 import PreviewModal from "./PreviewModal";
+import { escapeHTML } from "../utils/helpers";
 
 function ChatContainer() {
   const [messages, setMessages] = useState([]);
   const [currentFiles, setCurrentFiles] = useState([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [previewFile, setPreviewFile] = useState(null);
-  const abortControllerRef = useRef(null);
+  const abortController = useRef(null);
 
   const sendMessage = useCallback(
     async (message) => {
       if (!message && currentFiles.length === 0 && !isGenerating) return;
 
       if (isGenerating) {
-        if (abortControllerRef.current) {
-          abortControllerRef.current.abort();
+        if (abortController.current) {
+          abortController.current.abort();
           return;
         }
       }
 
-      setMessages((prev) => [...prev, { type: "user", content: message }]);
+      setMessages((prev) => [
+        ...prev,
+        { type: "user-message", content: message },
+      ]);
       setIsGenerating(true);
 
       const formData = new FormData();
       formData.append("message", message);
       currentFiles.forEach((file) => {
-        formData.append(`file`, file);
+        formData.append("file", file);
       });
 
       try {
-        abortControllerRef.current = new AbortController();
-        const response = await fetch("http://localhost:3000/chat", {
+        abortController.current = new AbortController();
+        const response = await fetch("http://localhost:8000/chat", {
           method: "POST",
           body: formData,
-          signal: abortControllerRef.current.signal,
+          signal: abortController.current.signal,
         });
 
         if (!response.ok) {
@@ -46,56 +51,59 @@ function ChatContainer() {
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
 
-        let fullMessage = "";
-
-        const updateMessages = (newContent) => {
-          setMessages((prevMessages) => {
-            const newMessages = [...prevMessages];
-            if (newMessages[newMessages.length - 1]?.type === "bot") {
-              newMessages[newMessages.length - 1].content = newContent;
-            } else {
-              newMessages.push({ type: "bot", content: newContent });
-            }
-            return newMessages;
-          });
-        };
-
+        let fullResponse = "";
         while (true) {
           const { value, done } = await reader.read();
           if (done) break;
 
           const chunk = decoder.decode(value, { stream: true });
+          // parse sebagai JSON, jika gagal gunakan sebagai teks biasa
+          let processedChunk;
           try {
             const jsonChunk = JSON.parse(chunk);
-            fullMessage += jsonChunk.content || JSON.stringify(jsonChunk);
+            processedChunk = jsonChunk.content || JSON.stringify(jsonChunk);
           } catch (e) {
-            fullMessage += chunk;
+            processedChunk = chunk;
           }
+          // Escape HTML untuk menghindari XSS
+          processedChunk = escapeHTML(processedChunk);
 
-          updateMessages(fullMessage); // Panggil fungsi pembaruan
+          fullResponse += chunk;
+
+          setMessages((prev) => {
+            const newMessages = [...prev];
+            if (newMessages[newMessages.length - 1]?.type === "bot-message") {
+              newMessages[newMessages.length - 1].content = fullResponse;
+            } else {
+              newMessages.push({ type: "bot-message", content: fullResponse });
+            }
+            return newMessages;
+          });
         }
+
+        // Reset file input setelah selesai
+        setCurrentFiles([]);
+        console.log("Full Response:", fullResponse);
       } catch (error) {
         if (error.name === "AbortError") {
-          console.log("Generasi respons dihentikan oleh pengguna");
+          console.log("Message generation aborted by user");
           setMessages((prev) => [
             ...prev,
-            { type: "bot", content: "Response dihentikan." },
+            { type: "bot-message", content: "Response generation stopped." },
           ]);
         } else {
-          console.error("Error:", error.message);
+          console.error("Error:", error);
           setMessages((prev) => [
             ...prev,
             {
-              type: "bot",
-              content:
-                "Terjadi kesalahan saat mengirim pesan: " + error.message,
+              type: "bot-message",
+              content: "An error occurred while sending the message.",
             },
           ]);
         }
       } finally {
-        abortControllerRef.current = null;
         setIsGenerating(false);
-        setCurrentFiles([]);
+        abortController.current = null;
       }
     },
     [currentFiles, isGenerating]

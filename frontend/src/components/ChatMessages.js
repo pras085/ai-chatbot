@@ -1,75 +1,106 @@
-import React, { useEffect, useRef } from "react";
-import { marked } from "marked";
-import hljs from "highlight.js";
+import React, { useState, useEffect, useRef } from "react";
+import ReactMarkdown from "react-markdown";
+import { Light as SyntaxHighlighter } from "react-syntax-highlighter";
+import { dracula } from "react-syntax-highlighter/dist/esm/styles/hljs";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faCopy } from "@fortawesome/free-solid-svg-icons";
 
-/**
- * ChatMessages Component
- *
- * Menampilkan pesan-pesan dalam chat.
- *
- * @param {Object[]} messages - Array pesan untuk ditampilkan
- */
-function ChatMessages({ messages }) {
+// Komponen untuk menangani render kode dengan Markdown dan membuatnya collapsible
+const RenderCodeBlock = ({ language, value }) => {
+  const [isCollapsed, setIsCollapsed] = useState(true);
+
+  const toggleCollapse = () => {
+    setIsCollapsed(!isCollapsed);
+  };
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(value).then(
+      () => {
+        alert("Code copied to clipboard!");
+      },
+      (err) => {
+        console.error("Failed to copy: ", err);
+      }
+    );
+  };
+
+  return (
+    <div className="collapsible-code-block">
+      <div
+        className="collapsible-header"
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
+        <div>
+          <span className="language-label">{language || "plaintext"}</span>
+          <button className="toggle-btn" onClick={toggleCollapse}>
+            {isCollapsed ? "Show code" : "Hide code"}
+          </button>
+        </div>
+        {!isCollapsed && (
+          <FontAwesomeIcon
+            icon={faCopy}
+            className="copy-icon"
+            onClick={handleCopy}
+            title="Copy code"
+          />
+        )}
+      </div>
+      {!isCollapsed && (
+        <SyntaxHighlighter language={language || "plaintext"} style={dracula}>
+          {value}
+        </SyntaxHighlighter>
+      )}
+    </div>
+  );
+};
+
+const ChatMessages = ({ messages }) => {
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
-    marked.use({
-      highlight: function (code, lang) {
-        const language = hljs.getLanguage(lang) ? lang : "plaintext";
-        return hljs.highlight(code, { language }).value;
-      },
-      langPrefix: "hljs language-",
-      renderer: {
-        code(code, language) {
-          const validLanguage = hljs.getLanguage(language)
-            ? language
-            : "plaintext";
-          const highlightedCode = hljs.highlight(code, {
-            language: validLanguage,
-          }).value;
-          return `
-                        <div class="collapsible-code-block">
-                            <div class="collapsible-header">
-                                <span class="language-label">${validLanguage}</span>
-                                <button class="toggle-btn">Show code</button>
-                            </div>
-                            <pre class="code-content" style="display:none;">
-                                <code class="hljs language-${validLanguage}">${highlightedCode}</code>
-                            </pre>
-                        </div>`;
-        },
-      },
-    });
-  }, []);
-
-  useEffect(() => {
+    // Scroll ke pesan terbaru
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
-
-  /**
-   * Render pesan individu
-   * @param {Object} message - Objek pesan
-   * @returns {JSX.Element}
-   */
-  const renderMessage = (message) => {
-    if (message.type === "bot") {
-      return (
-        <div dangerouslySetInnerHTML={{ __html: marked(message.content) }} />
-      );
-    }
-    return <div>{message.content}</div>;
-  };
 
   return (
     <div id="chat-messages">
       {messages.map((msg, index) => (
-        <div key={index} className={`message ${msg.type}-message`}>
-          {renderMessage(msg)}
+        <div key={index} className={`message ${msg.type}`}>
+          <Message content={msg.content} />
         </div>
       ))}
       <div ref={messagesEndRef} />
     </div>
   );
-}
+};
+
+// Komponen untuk pesan
+const Message = ({ content }) => {
+  return (
+    <ReactMarkdown
+      components={{
+        code({ inline, className, children, ...props }) {
+          const match = /language-(\w+)/.exec(className || "");
+          return !inline && match ? (
+            <RenderCodeBlock
+              language={match[1]}
+              value={String(children).replace(/\n$/, "")}
+            />
+          ) : (
+            <code className={className} {...props}>
+              {children}
+            </code>
+          );
+        },
+      }}
+    >
+      {content}
+    </ReactMarkdown>
+  );
+};
 
 export default ChatMessages;

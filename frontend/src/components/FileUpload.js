@@ -1,4 +1,9 @@
 import React from "react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faFile, faRemove } from "@fortawesome/free-solid-svg-icons";
+import { formatFileSize } from "../utils/helpers";
+
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB in bytes
 
 /**
  * FileUpload Component
@@ -22,8 +27,25 @@ function FileUpload({
    */
   const handleFileChange = (e) => {
     const newFiles = Array.from(e.target.files);
-    const validFiles = newFiles.filter((file) => isAllowedFileType(file));
-    onFileUpload(validFiles);
+    const validFiles = newFiles.filter((file) => {
+      if (!isAllowedFileType(file)) {
+        alert(`File type not allowed: ${file.name}`);
+        return false;
+      }
+      if (file.size > MAX_FILE_SIZE) {
+        alert(
+          `File too large: ${file.name}. Maximum size is ${
+            MAX_FILE_SIZE / 1024 / 1024
+          }MB.`
+        );
+        return false;
+      }
+      return true;
+    });
+
+    if (validFiles.length > 0) {
+      onFileUpload(validFiles);
+    }
     e.target.value = ""; // Reset file input
   };
 
@@ -51,13 +73,7 @@ function FileUpload({
         onChange={handleFileChange}
         multiple
       />
-      <button
-        id="attach-button"
-        onClick={() => document.getElementById("file-input").click()}
-        data-tooltip="Upload docs/image"
-      >
-        <i className="fas fa-paperclip"></i>
-      </button>
+
       <div className="file-bubbles-container">
         {currentFiles.map((file, index) => (
           <div
@@ -66,17 +82,19 @@ function FileUpload({
             onClick={() => onPreviewFile(file)}
           >
             <div className="file-info">
-              <i className="fas fa-file"></i>
+              <FontAwesomeIcon icon={faFile} className="i" />
               <span className="file-name">{file.name}</span>
+              <span className="file-size">({formatFileSize(file.size)})</span>
             </div>
             <div className="file-actions">
-              <i
-                className="fas fa-times remove-file"
+              <FontAwesomeIcon
+                icon={faRemove}
+                className="i"
                 onClick={(e) => {
                   e.stopPropagation();
                   onRemoveFile(file);
                 }}
-              ></i>
+              />
             </div>
           </div>
         ))}

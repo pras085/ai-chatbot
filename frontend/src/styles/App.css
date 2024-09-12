@@ -2,13 +2,20 @@ body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
     line-height: 1.6;
     color: #e0e0e0;
-    max-width: 800px;
-    margin: 0 auto;
-    padding: 20px;
+    max-width: 100%;
+    height: 100%;
+    margin: 20px;
     background-color: #121212;
 }
 
 #chat-container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 0;
     background-color: #1e1e1e;
     border-radius: 8px;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
@@ -16,10 +23,10 @@ body {
 }
 
 #chat-messages {
-    height: 600px;
+    height: 100%;
     overflow-y: auto;
     padding: 20px;
-    display: flex;
+    display: flex;    
     flex-direction: column;
 }
 
@@ -29,6 +36,7 @@ body {
     padding: 10px;
     border-radius: 6px;
     max-width: 80%;
+
 }
 
 @keyframes fadeIn {
@@ -46,34 +54,26 @@ body {
 .user-message {
     background-color: #2c5282;
     border-radius: 6px;
-    padding: 12px 18px;
-    max-width: 50%;
-    align-self: flex-end;
+    padding: 10px;
+    max-width: 80%;
     margin-left: auto;
+    line-height: 0px;
 }
 
 .bot-message {
     background-color: #2d3748;
     border-radius: 6px;
-    padding: 12px 18px;
+    padding: 10px;
     max-width: 80%;
 }
 
-.bot-message p {
-    margin: 0 0 10px 0;
-}
-  
 .bot-message pre {
-    background-color: #1a202c !important;
     border-radius: 6px;
-    padding: 16px;
-    overflow-x: auto;
 }
 
 .bot-message code {
-    font-family: 'Courier New', Courier, monospace !important;
+    font-family: "Fira Code", "Fira Mono", Menlo, Consolas, "DejaVu Sans Mono", monospace;
     font-size: 14px;
-    color: #a0aec0;
 }
 
 .bot-message ul,
@@ -146,8 +146,7 @@ body {
 }
 
 .collapsible-code-block {
-    margin: 10px 0;
-    border: 1px solid #4a5568;
+    border: 4px solid #f0f0f0;
     border-radius: 6px;
     overflow: hidden;
 }
@@ -156,10 +155,8 @@ body {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 5px;
+    /* padding: 5px; */
     background-color: #f0f0f0;
-    border-bottom: 1px solid #ddd;
-    border-radius: 4px 4px 0 0;
   }
 
 .language-label {
@@ -183,12 +180,6 @@ body {
     background-color: #3182ce;
 }
 
-.code-content {
-    padding: 10px;
-    background-color: #1a202c;
-    overflow-x: auto;
-}
-
 .copy-icon {
     cursor: pointer;
     margin-left: 10px;
@@ -204,7 +195,7 @@ body {
 
 #user-input {
     display: flex;
-    padding: 15px;
+    padding: 10px;
     border-top: 1px solid #4a5568;
     background-color: #1e1e1e;
 }
@@ -353,9 +344,7 @@ body {
     color: #e0e0e0;
     margin: 10% auto;
     padding: 20px;
-    border: 1px solid #888;
-    width: 80%;
-    max-width: 700px;
+    max-width: 80%;
     border-radius: 6px;
     max-height: 80%;
     overflow: auto;
@@ -367,6 +356,7 @@ body {
     font-size: 28px;
     font-weight: bold;
     cursor: pointer;
+    gap: 10px;
 }
 
 #preview-close:hover,

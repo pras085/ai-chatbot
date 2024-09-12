@@ -4,6 +4,7 @@ from config import Config
 import asyncio
 import logging
 from typing import Dict, List
+from knowledge_base import KnowledgeBase
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -11,7 +12,7 @@ logger = logging.getLogger(__name__)
 CLAUDE_API_KEY = Config.CLAUDE_API_KEY
 MODEL_NAME = Config.MODEL_NAME
 
-
+kb = KnowledgeBase()
 conversation_history: Dict[str, List[Dict[str, str]]] = {}
 
 
@@ -43,14 +44,37 @@ async def chat_with_retry_stream(user_id: str, message: str):
     for attempt in range(max_retries):
         try:
             user_history = conversation_history.get(user_id, [])
-            messages = user_history + [{"role": "user", "content": message}]
+            knowledge_base = kb.get_all_items()
+            if not knowledge_base:
+                logger.warning("Knowledge base is empty. Consider adding some data.")
+
+            system_message = """Anda adalah asisten AI untuk muatmuat.com. Gunakan informasi berikut untuk menjawab pertanyaan:
+            
+            {knowledge}
+            
+            Jika pertanyaan tidak terkait dengan informasi di atas, jawab dengan bijak bahwa Anda tidak memiliki informasi tersebut.
+            Tidak perlu meminta maaf.
+            Kamu tetap harus meyakinkan user bahwa kamu masih bisa menjawab pertanyaan lain"""
+
+            knowledge_str = "\n".join(
+                [
+                    f"Q: {item['question']}\nA: {item['answer']}"
+                    for item in knowledge_base
+                ]
+            )
+
+            messages = [
+                *user_history,
+                {"role": "user", "content": message},
+            ]
 
             async with AsyncAnthropic(api_key=CLAUDE_API_KEY) as client:
                 stream = await client.messages.create(
                     model="claude-3-sonnet-20240229",
                     messages=messages,
+                    system=system_message.format(knowledge=knowledge_str),
                     max_tokens=1000,
-                    temperature=0.2,
+                    temperature=0,
                     stream=True,
                 )
 

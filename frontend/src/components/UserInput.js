@@ -36,6 +36,7 @@ function UserInput({ onSendMessage, isGenerating }) {
         id="message-input"
         value={message}
         onChange={(e) => setMessage(e.target.value)}
+        autoComplete="off"
         placeholder="Type your message..."
       />{" "}
       <button

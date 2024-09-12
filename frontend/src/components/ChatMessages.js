@@ -1,13 +1,20 @@
 import React, { useState, useEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
-import { Light as SyntaxHighlighter } from "react-syntax-highlighter";
-import { dracula } from "react-syntax-highlighter/dist/esm/styles/hljs";
+import hljs from "highlight.js";
+import "highlight.js/styles/sunburst.css";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCopy } from "@fortawesome/free-solid-svg-icons";
 
 // Komponen untuk menangani render kode dengan Markdown dan membuatnya collapsible
 const RenderCodeBlock = ({ language, value }) => {
   const [isCollapsed, setIsCollapsed] = useState(true);
+  const codeRef = useRef(null);
+
+  useEffect(() => {
+    if (codeRef.current && !isCollapsed) {
+      hljs.highlightElement(codeRef.current);
+    }
+  }, [value, isCollapsed]);
 
   const toggleCollapse = () => {
     setIsCollapsed(!isCollapsed);
@@ -50,9 +57,9 @@ const RenderCodeBlock = ({ language, value }) => {
         )}
       </div>
       {!isCollapsed && (
-        <SyntaxHighlighter language={language || "plaintext"} style={dracula}>
-          {value}
-        </SyntaxHighlighter>
+        <pre className="hljs">
+          <code ref={codeRef}>{value}</code>
+        </pre>
       )}
     </div>
   );

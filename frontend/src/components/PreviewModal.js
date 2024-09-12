@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { formatFileSize } from "../utils/helpers";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faClose } from "@fortawesome/free-solid-svg-icons";
 
 /**
  * PreviewModal Component
@@ -39,9 +41,7 @@ function PreviewModal({ file, onClose }) {
   return (
     <div id="preview-modal" style={{ display: "block" }}>
       <div id="preview-content">
-        <span id="preview-close" onClick={onClose}>
-          &times;
-        </span>
+        <FontAwesomeIcon icon={faClose} id="preview-close" onClick={onClose} />
         {preview?.type === "image" && (
           <img id="preview-image" src={preview.content} alt="Preview" />
         )}

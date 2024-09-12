@@ -1,7 +1,7 @@
 import React from "react";
 import ChatContainer from "./components/ChatContainer";
 import "./styles/App.css";
-import "highlight.js/styles/default.css"; // TODO : ganti react-highiliter nnti
+import "highlight.js/styles/sunburst.css";
 
 /**
  * App Component

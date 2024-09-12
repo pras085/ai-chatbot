@@ -1,38 +1,84 @@
 import os
-import json
-from backend.app.utils.rag_utils import PDFProcessor
+import psycopg2
+from psycopg2.extras import DictCursor
+from typing import Dict, List
 
 
 class KnowledgeBase:
-    def __init__(self, pdf_filename):
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        self.pdf_file = os.path.join(current_dir, "src", pdf_filename)
-        print(f"Attempting to access PDF at: {self.pdf_file}")  # Debug print
-        self.knowledge = self.refresh_knowledge()
+    """
+    Kelas untuk mengelola interaksi dengan database PostgreSQL yang menyimpan knowledge base.
+    """
 
-    def refresh_knowledge(self):
-        if not os.path.exists(self.pdf_file):
-            raise FileNotFoundError(f"PDF file not found: {self.pdf_file}")
-        return PDFProcessor.extract_text_from_pdf(self.pdf_file)
+    def __init__(self):
+        """
+        Inisialisasi koneksi database dan memastikan tabel yang diperlukan ada.
+        """
+        self.conn_params = {
+            "dbname": os.getenv("DB_NAME", "muatmuat_db"),
+            "user": os.getenv("DB_USER", ""),
+            "password": os.getenv("DB_PASSWORD", ""),
+            "host": os.getenv("DB_HOST", "localhost"),
+            "port": os.getenv("DB_PORT", "5432"),
+        }
+        self._create_table()
 
-    def get_knowledge(self):
-        return self.knowledge
+    def _create_table(self):
+        """
+        Membuat tabel knowledge_base jika belum ada.
+        """
+        with psycopg2.connect(**self.conn_params) as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS knowledge_base (
+                        id SERIAL PRIMARY KEY,
+                        question TEXT NOT NULL,
+                        answer TEXT NOT NULL
+                    )
+                """)
+            conn.commit()
 
-    def add_knowledge(self, new_knowledge):
-        self.knowledge.append(new_knowledge)
+    def add_item(self, question: str, answer: str):
+        """
+        Menambahkan item baru ke knowledge base.
 
-    def remove_knowledge(self, index):
-        return self.knowledge.pop(index) if 0 <= index < len(self.knowledge) else None
+        Args:
+            question (str): Pertanyaan untuk ditambahkan.
+            answer (str): Jawaban yang sesuai dengan pertanyaan.
+        """
+        with psycopg2.connect(**self.conn_params) as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "INSERT INTO knowledge_base (question, answer) VALUES (%s, %s)",
+                    (question, answer),
+                )
+            conn.commit()
 
-    def save_to_file(self, filename):
-        with open(filename, "w") as f:
-            json.dump(self.knowledge, f)
+    def get_all_items(self) -> List[Dict[str, str]]:
+        """
+        Mengambil semua item dari knowledge base.
 
-    def load_from_file(self, filename):
-        with open(filename, "r") as f:
-            self.knowledge = json.load(f)
+        Returns:
+            List[Dict[str, str]]: Daftar dictionary yang berisi pasangan pertanyaan dan jawaban.
+        """
+        with psycopg2.connect(**self.conn_params) as conn:
+            with conn.cursor(cursor_factory=DictCursor) as cur:
+                cur.execute("SELECT question, answer FROM knowledge_base")
+                return [dict(row) for row in cur.fetchall()]
 
+    def search_items(self, query: str) -> List[Dict[str, str]]:
+        """
+        Mencari item dalam knowledge base berdasarkan query.
 
-# Initialization
-PDF_FILE = "about_muatmuat.pdf"
-knowledge_base = KnowledgeBase(PDF_FILE)
+        Args:
+            query (str): String pencarian.
+
+        Returns:
+            List[Dict[str, str]]: Daftar dictionary yang berisi pasangan pertanyaan dan jawaban yang cocok dengan query.
+        """
+        with psycopg2.connect(**self.conn_params) as conn:
+            with conn.cursor(cursor_factory=DictCursor) as cur:
+                cur.execute(
+                    "SELECT question, answer FROM knowledge_base WHERE question ILIKE %s OR answer ILIKE %s",
+                    (f"%{query}%", f"%{query}%"),
+                )
+                return [dict(row) for row in cur.fetchall()]

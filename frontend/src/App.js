@@ -1,18 +1,26 @@
-import React from "react";
-import ChatContainer from "./components/ChatContainer";
+import ChatApp from "./components/ChatApp";
 import "./styles/App.css";
 import "highlight.js/styles/sunburst.css";
+// import { v4 as uuidv4 } from "uuid"; // Pastikan untuk menginstal package uuid
 
 /**
  * App Component
  *
- * Komponen utama yang menginisialisasi aplikasi chat.
- * Ini adalah titik masuk utama untuk aplikasi React.
+ * Komponen utama aplikasi yang menampung seluruh aplikasi chat.
+ * Bertanggung jawab untuk:
+ * - Menyediakan struktur dasar aplikasi
+ * - Menginisialisasi dan menyimpan userId
+ * - Merender komponen ChatApp yang mengelola seluruh fungsionalitas chat
  */
+
 function App() {
+  const userId = "1";
   return (
     <div className="App">
-      <ChatContainer />
+      <header className="App-header">
+        <h1>Chatbot AI</h1>
+      </header>
+      <main>{userId && <ChatApp userId={userId} />}</main>
     </div>
   );
 }

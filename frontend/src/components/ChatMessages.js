@@ -65,7 +65,7 @@ const RenderCodeBlock = ({ language, value }) => {
   );
 };
 
-const ChatMessages = ({ messages }) => {
+const ChatMessages = ({ messages, onPreviewFile }) => {
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
@@ -78,6 +78,12 @@ const ChatMessages = ({ messages }) => {
       {messages.map((msg, index) => (
         <div key={index} className={`message ${msg.type}`}>
           <Message content={msg.content} />
+          {msg.file && (
+            <div className="file-attachment">
+              <span>{msg.file.name}</span>
+              <button onClick={() => onPreviewFile(msg.file)}>Preview</button>
+            </div>
+          )}
         </div>
       ))}
       <div ref={messagesEndRef} />

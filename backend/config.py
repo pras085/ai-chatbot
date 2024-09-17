@@ -1,4 +1,5 @@
 import os
+import psycopg2
 
 
 class Config:
@@ -17,3 +18,13 @@ class Config:
 
     # Nama model terbaru yang digunakan
     MODEL_NAME = "claude-3-5-sonnet-20240620"
+
+
+def get_db_connection():
+    return psycopg2.connect(
+        dbname=os.getenv("DB_NAME", "muatmuat_db"),
+        user=os.getenv("DB_USER", ""),
+        password=os.getenv("DB_PASSWORD", ""),
+        host=os.getenv("DB_HOST", "localhost"),
+        port=os.getenv("DB_PORT", "5432"),
+    )

@@ -8,7 +8,7 @@ import { faClose } from "@fortawesome/free-solid-svg-icons";
  *
  * Menampilkan preview untuk file yang dipilih.
  *
- * @param {File} file - File yang akan di-preview
+ * @param {Object} file - File yang akan di-preview (bisa berupa File object atau {name, url, size})
  * @param {Function} onClose - Callback function untuk menutup modal
  */
 function PreviewModal({ file, onClose }) {
@@ -16,22 +16,32 @@ function PreviewModal({ file, onClose }) {
 
   useEffect(() => {
     if (file) {
-      if (file.type.startsWith("image/")) {
-        const reader = new FileReader();
-        reader.onload = (e) =>
-          setPreview({ type: "image", content: e.target.result });
-        reader.readAsDataURL(file);
-      } else if (
-        file.type === "text/plain" ||
-        file.type === "application/json" ||
-        file.type === "text/html"
-      ) {
-        const reader = new FileReader();
-        reader.onload = (e) =>
-          setPreview({ type: "text", content: e.target.result });
-        reader.readAsText(file);
-      } else {
-        setPreview({ type: "unsupported" });
+      if (file.url) {
+        // File from server
+        if (file.url.match(/\.(jpeg|jpg|gif|png)$/)) {
+          setPreview({ type: "image", content: file.url });
+        } else {
+          setPreview({ type: "unsupported" });
+        }
+      } else if (file instanceof File) {
+        // File from local upload
+        if (file.type.startsWith("image/")) {
+          const reader = new FileReader();
+          reader.onload = (e) =>
+            setPreview({ type: "image", content: e.target.result });
+          reader.readAsDataURL(file);
+        } else if (
+          file.type === "text/plain" ||
+          file.type === "application/json" ||
+          file.type === "text/html"
+        ) {
+          const reader = new FileReader();
+          reader.onload = (e) =>
+            setPreview({ type: "text", content: e.target.result });
+          reader.readAsText(file);
+        } else {
+          setPreview({ type: "unsupported" });
+        }
       }
     }
   }, [file]);

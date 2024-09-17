@@ -1,20 +1,72 @@
 /* eslint-disable no-loop-func */
-import React, { useState, useCallback, useRef } from "react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
 import ChatMessages from "./ChatMessages";
 import UserInput from "./UserInput";
 import FileUpload from "./FileUpload";
 import PreviewModal from "./PreviewModal";
 import { escapeHTML } from "../utils/helpers";
+import { sendChatMessage, getChatMessages } from "../services/api";
 
-function ChatContainer() {
+/**
+ * ChatContainer Component
+ *
+ * Komponen utama untuk menampilkan dan mengelola chat individu.
+ * Fitur:
+ * - Menampilkan riwayat pesan chat
+ * - Memungkinkan pengiriman pesan baru
+ * - Menangani upload dan preview file
+ * - Menampilkan respons AI secara real-time (streaming)
+ *
+ * @param {number} chatId - ID chat yang sedang aktif
+ * @param {Function} onBackToList - Callback function untuk kembali ke daftar chat
+ * @param {string} userId - ID pengguna saat ini
+ */
+function ChatContainer({ chatId, onBackToList, userId }) {
+  console.log("ChatContainer rendered with chatId:", chatId); // Tambahkan log ini
   const [messages, setMessages] = useState([]);
   const [currentFiles, setCurrentFiles] = useState([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [previewFile, setPreviewFile] = useState(null);
   const abortController = useRef(null);
+  const [error, setError] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    if (chatId) {
+      loadChatHistory();
+    } else {
+      console.error("chatId is undefined");
+      onBackToList();
+    }
+  }, [chatId]);
+
+  const loadChatHistory = async () => {
+    if (chatId === undefined) {
+      console.error("Cannot load chat history: chatId is undefined");
+      return;
+    }
+    setIsLoading(true);
+
+    try {
+      const messages = await getChatMessages(chatId);
+      console.info("messages:", messages.messages);
+      setMessages(messages.messages);
+      setError(null);
+    } catch (error) {
+      console.error("Error loading chat history:", error);
+      setError("Failed to load chat history. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const sendMessage = useCallback(
     async (message) => {
+      // if (chatId === undefined) {
+      //   console.error("Cannot send message: chatId is undefined");
+      //   return;
+      // }
+
       if (!message && currentFiles.length === 0 && !isGenerating) return;
 
       if (isGenerating) {
@@ -26,49 +78,32 @@ function ChatContainer() {
 
       setMessages((prev) => [
         ...prev,
-        { type: "user-message", content: message },
+        { type: "user-message", content: message, file: currentFiles[0] },
       ]);
       setIsGenerating(true);
 
-      const formData = new FormData();
-      formData.append("message", message);
-      currentFiles.forEach((file) => {
-        formData.append("file", file);
-      });
-
       try {
         abortController.current = new AbortController();
-        const response = await fetch("http://localhost:8000/chat", {
-          method: "POST",
-          body: formData,
-          signal: abortController.current.signal,
-        });
+        const response = await sendChatMessage(
+          userId,
+          chatId,
+          message,
+          currentFiles[0],
+          abortController.current.signal
+        );
 
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
+        let fullResponse = "";
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
 
-        let fullResponse = "";
         while (true) {
           const { value, done } = await reader.read();
           if (done) break;
 
           const chunk = decoder.decode(value, { stream: true });
-          // parse sebagai JSON, jika gagal gunakan sebagai teks biasa
-          let processedChunk;
-          try {
-            const jsonChunk = JSON.parse(chunk);
-            processedChunk = jsonChunk.content || JSON.stringify(jsonChunk);
-          } catch (e) {
-            processedChunk = chunk;
-          }
-          // Escape HTML untuk menghindari XSS
-          processedChunk = escapeHTML(processedChunk);
+          let processedChunk = escapeHTML(chunk);
 
-          fullResponse += chunk;
+          fullResponse += processedChunk;
 
           setMessages((prev) => {
             const newMessages = [...prev];
@@ -81,9 +116,7 @@ function ChatContainer() {
           });
         }
 
-        // Reset file input setelah selesai
         setCurrentFiles([]);
-        console.log("Full Response:", fullResponse);
       } catch (error) {
         if (error.name === "AbortError") {
           console.log("Message generation aborted by user");
@@ -106,8 +139,9 @@ function ChatContainer() {
         abortController.current = null;
       }
     },
-    [currentFiles, isGenerating]
+    [currentFiles, isGenerating, chatId, userId]
   );
+
   const handleFileUpload = useCallback((files) => {
     setCurrentFiles((prev) => [...prev, ...files]);
   }, []);
@@ -120,9 +154,13 @@ function ChatContainer() {
     setPreviewFile(file);
   }, []);
 
+  if (isLoading) return <div>Loading chat...</div>;
+  if (error) return <div>{error}</div>;
+
   return (
     <div id="chat-container">
-      <ChatMessages messages={messages} />
+      <button onClick={onBackToList}>Back to Chat List</button>
+      <ChatMessages messages={messages} onPreviewFile={handlePreviewFile} />
       <FileUpload
         currentFiles={currentFiles}
         onFileUpload={handleFileUpload}

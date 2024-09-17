@@ -88,14 +88,15 @@ export const createNewChat = async (userId) => {
     const response = await fetch(`${API_BASE_URL}/user/${userId}/chats`, {
       method: "POST",
     });
-    if (!response.ok) throw new Error("Failed to create new chat");
+    if (!response.ok) {
+      throw new Error("Network response was not ok");
+    }
     return await response.json();
   } catch (error) {
     console.error("Error creating new chat:", error);
     throw error;
   }
 };
-
 /**
  * Mengunggah file.
  *

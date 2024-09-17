@@ -22,7 +22,6 @@ import { sendChatMessage, getChatMessages } from "../services/api";
  * @param {string} userId - ID pengguna saat ini
  */
 function ChatContainer({ chatId, onBackToList, userId }) {
-  console.log("ChatContainer rendered with chatId:", chatId); // Tambahkan log ini
   const [messages, setMessages] = useState([]);
   const [currentFiles, setCurrentFiles] = useState([]);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -33,9 +32,10 @@ function ChatContainer({ chatId, onBackToList, userId }) {
 
   useEffect(() => {
     if (chatId) {
+      console.log("Loading chat:", chatId);
       loadChatHistory();
     } else {
-      console.error("chatId is undefined");
+      console.log("No chat selected");
       onBackToList();
     }
   }, [chatId]);
@@ -48,9 +48,14 @@ function ChatContainer({ chatId, onBackToList, userId }) {
     setIsLoading(true);
 
     try {
-      const messages = await getChatMessages(chatId);
-      console.info("messages:", messages.messages);
-      setMessages(messages.messages);
+      const response = await getChatMessages(chatId);
+      const formattedMessages = response.messages.map((message) => ({
+        type: message.is_user ? "user-message" : "bot-message",
+        content: message.content,
+        timestamp: message.timestamp,
+      }));
+      console.info("messages:", formattedMessages);
+      setMessages(formattedMessages);
       setError(null);
     } catch (error) {
       console.error("Error loading chat history:", error);
@@ -161,13 +166,14 @@ function ChatContainer({ chatId, onBackToList, userId }) {
     <div id="chat-container">
       <button onClick={onBackToList}>Back to Chat List</button>
       <ChatMessages messages={messages} onPreviewFile={handlePreviewFile} />
-      <FileUpload
+      <FileUpload onFileUpload={handleFileUpload} />
+      <UserInput
+        onSendMessage={sendMessage}
+        isGenerating={isGenerating}
         currentFiles={currentFiles}
-        onFileUpload={handleFileUpload}
         onRemoveFile={handleRemoveFile}
         onPreviewFile={handlePreviewFile}
       />
-      <UserInput onSendMessage={sendMessage} isGenerating={isGenerating} />
       {previewFile && (
         <PreviewModal file={previewFile} onClose={() => setPreviewFile(null)} />
       )}

@@ -1,12 +1,13 @@
-from fastapi import APIRouter, HTTPException, status, Depends, File, Form, UploadFile
+from fastapi import APIRouter, HTTPException, status, File, Form, UploadFile
 from fastapi.responses import StreamingResponse, FileResponse, JSONResponse
 from app.services import chat_service
 import logging
 from app.utils.file_utils import save_uploaded_file
 import os
 from dotenv import load_dotenv
-from typing import List, Dict, Any
+from typing import List, Dict
 from datetime import datetime
+from fastapi.encoders import jsonable_encoder
 
 
 load_dotenv()
@@ -84,10 +85,11 @@ async def get_chat_messages(chat_id: int):
                 status_code=status.HTTP_200_OK,
                 content={"messages": [], "chat_id": chat_id},
             )
-        logging.info(f"Returning {len(messages)} messages")
+        json_compatible_messages = jsonable_encoder(messages)
+        logging.info(f"Returning {len(json_compatible_messages)} messages")
         return JSONResponse(
             status_code=status.HTTP_200_OK,
-            content={"messages": messages, "chat_id": chat_id},
+            content={"messages": json_compatible_messages, "chat_id": chat_id},
         )
     except Exception as e:
         logging.error(f"Error in get_chat_messages endpoint: {str(e)}", exc_info=True)
@@ -177,7 +179,12 @@ async def create_new_chat(user_id: str = DEFAULT_USER):
     """
     try:
         new_chat = chat_service.create_new_chat(user_id)
-        return new_chat
+        return {
+            "id": new_chat["id"],
+            "user_id": new_chat["user_id"],
+            "title": "New Chat",
+            "created_at": datetime.now().isoformat(),
+        }
     except Exception as e:
         logging.error(f"Error in create_new_chat endpoint: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")

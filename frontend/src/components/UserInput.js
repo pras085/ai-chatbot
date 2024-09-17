@@ -4,7 +4,10 @@ import {
   faPaperPlane,
   faStop,
   faPaperclip,
+  faFile,
+  faRemove,
 } from "@fortawesome/free-solid-svg-icons";
+import { formatFileSize } from "../utils/helpers";
 
 /**
  * UserInput Component
@@ -14,7 +17,13 @@ import {
  * @param {Function} onSendMessage - Callback function untuk mengirim pesan
  * @param {boolean} isGenerating - Status generasi respons
  */
-function UserInput({ onSendMessage, isGenerating }) {
+function UserInput({
+  onSendMessage,
+  isGenerating,
+  currentFiles,
+  onRemoveFile,
+  onPreviewFile,
+}) {
   const [message, setMessage] = useState("");
 
   /**
@@ -31,14 +40,37 @@ function UserInput({ onSendMessage, isGenerating }) {
 
   return (
     <form id="user-input" onSubmit={handleSubmit}>
-      <input
-        type="text"
-        id="message-input"
-        value={message}
-        onChange={(e) => setMessage(e.target.value)}
-        autoComplete="off"
-        placeholder="Type your message..."
-      />{" "}
+      <div className="input-container">
+        <div className="file-bubbles-container">
+          {currentFiles.map((file, index) => (
+            <div
+              key={index}
+              className="file-bubble"
+              onClick={() => onPreviewFile(file)}
+            >
+              <FontAwesomeIcon icon={faFile} className="i" />
+              <span className="file-name">{file.name}</span>
+              <span className="file-size">({formatFileSize(file.size)})</span>
+              <FontAwesomeIcon
+                icon={faRemove}
+                className="i"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRemoveFile(file);
+                }}
+              />
+            </div>
+          ))}
+        </div>
+        <input
+          type="text"
+          id="message-input"
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          autoComplete="off"
+          placeholder="Type your message..."
+        />
+      </div>
       <button
         type="button"
         id="attach-button"

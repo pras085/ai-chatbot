@@ -4,6 +4,8 @@ from psycopg2.extras import DictCursor
 from typing import Dict, List, Any
 import logging
 
+logger = logging.getLogger(__name__)
+
 
 class KnowledgeBase:
     """
@@ -23,8 +25,11 @@ class KnowledgeBase:
         }
         self._create_table()
 
+    def get_connection(self):
+        return psycopg2.connect(**self.conn_params)
+
     def _create_table(self):
-        with psycopg2.connect(**self.conn_params) as conn:
+        with self.get_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute("""
                     CREATE TABLE IF NOT EXISTS knowledge_base (
@@ -69,7 +74,7 @@ class KnowledgeBase:
             question (str): Pertanyaan untuk ditambahkan.
             answer (str): Jawaban yang sesuai dengan pertanyaan.
         """
-        with psycopg2.connect(**self.conn_params) as conn:
+        with self.get_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(
                     "INSERT INTO knowledge_base (question, answer) VALUES (%s, %s)",
@@ -84,10 +89,21 @@ class KnowledgeBase:
         Returns:
             List[Dict[str, str]]: Daftar dictionary yang berisi pasangan pertanyaan dan jawaban.
         """
-        with psycopg2.connect(**self.conn_params) as conn:
-            with conn.cursor(cursor_factory=DictCursor) as cur:
-                cur.execute("SELECT question, answer FROM knowledge_base")
-                return [dict(row) for row in cur.fetchall()]
+
+        try:
+            with self.get_connection() as conn:
+                with conn.cursor(cursor_factory=DictCursor) as cur:
+                    cur.execute("SELECT question, answer FROM knowledge_base")
+                    items = cur.fetchall()
+                    result = [dict(item) for item in items]
+                    logger.info(f"Retrieved {len(result)} items from knowledge base")
+                    return result
+        except Exception as e:
+            logger.error(
+                f"Error retrieving all items from knowledge base: {str(e)}",
+                exc_info=True,
+            )
+            return []
 
     def search_items(self, query: str) -> List[Dict[str, str]]:
         """
@@ -99,7 +115,7 @@ class KnowledgeBase:
         Returns:
             List[Dict[str, str]]: Daftar dictionary yang berisi pasangan pertanyaan dan jawaban yang cocok dengan query.
         """
-        with psycopg2.connect(**self.conn_params) as conn:
+        with self.get_connection() as conn:
             with conn.cursor(cursor_factory=DictCursor) as cur:
                 cur.execute(
                     "SELECT question, answer FROM knowledge_base WHERE question ILIKE %s OR answer ILIKE %s",
@@ -111,7 +127,7 @@ class KnowledgeBase:
         """
         Membuat chat baru dan mengembalikan ID-nya.
         """
-        with psycopg2.connect(**self.conn_params) as conn:
+        with self.get_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(
                     "INSERT INTO chats (user_id) VALUES (%s) RETURNING id", (user_id,)
@@ -124,33 +140,43 @@ class KnowledgeBase:
         """
         Menambahkan pesan ke chat tertentu.
         """
-        with psycopg2.connect(**self.conn_params) as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    "INSERT INTO messages (chat_id, content, is_user) VALUES (%s, %s, %s)",
-                    (chat_id, content, is_user),
-                )
-            conn.commit()
+
+        try:
+            with self.get_connection() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        "INSERT INTO messages (chat_id, content, is_user) VALUES (%s, %s, %s)",
+                        (chat_id, content, is_user),
+                    )
+                conn.commit()
+            logger.info(f"Added message to chat {chat_id}")
+        except Exception as e:
+            logger.error(f"Error adding message to chat: {str(e)}", exc_info=True)
 
     def get_chat_messages(self, chat_id: int) -> List[Dict[str, Any]]:
         """
         Mengambil semua pesan untuk chat tertentu.
         """
-        with psycopg2.connect(**self.conn_params) as conn:
-            with conn.cursor(cursor_factory=DictCursor) as cur:
-                cur.execute(
-                    "SELECT id, chat_id, content, is_user, timestamp FROM messages WHERE chat_id = %s ORDER BY timestamp",
-                    (chat_id,),
-                )
-                results = [dict(row) for row in cur.fetchall()]
-                logging.info(f"Retrieved {len(results)} messages")
-                return results
+        try:
+            with self.get_connection() as conn:
+                with conn.cursor(cursor_factory=DictCursor) as cur:
+                    cur.execute(
+                        "SELECT * FROM messages WHERE chat_id = %s ORDER BY timestamp ASC",
+                        (chat_id,),
+                    )
+                    messages = cur.fetchall()
+                    result = [dict(message) for message in messages]
+                    logger.info(f"Retrieved {len(result)} messages for chat {chat_id}")
+                    return result
+        except Exception as e:
+            logger.error(f"Error retrieving chat messages: {str(e)}", exc_info=True)
+            return []
 
     def get_user_chats(self, user_id: str):
         """
         Mengambil semua chat untuk user tertentu.
         """
-        with psycopg2.connect(**self.conn_params) as conn:
+        with self.get_connection() as conn:
             with conn.cursor(cursor_factory=DictCursor) as cur:
                 cur.execute(
                     "SELECT * FROM chats WHERE user_id = %s ORDER BY created_at DESC",
@@ -159,7 +185,7 @@ class KnowledgeBase:
                 return cur.fetchall()
 
     def create_new_chat(self, user_id: str):
-        with psycopg2.connect(**self.conn_params) as conn:
+        with self.get_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(
                     "INSERT INTO chats (user_id) VALUES (%s) RETURNING id", (user_id,)
@@ -176,7 +202,7 @@ class KnowledgeBase:
             chat_id (int): ID chat yang akan diupdate.
             title (str): Judul baru untuk chat.
         """
-        with psycopg2.connect(**self.conn_params) as conn:
+        with self.get_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(
                     "UPDATE chats SET title = %s WHERE id = %s", (title, chat_id)
@@ -184,14 +210,14 @@ class KnowledgeBase:
             conn.commit()
 
     def get_latest_chat_id(self, user_id: str) -> int:
-        with psycopg2.connect(**self.conn_params) as conn:
+        with self.get_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute("SELECT MAX(id) FROM chats WHERE user_id = %s", (user_id,))
                 result = cur.fetchone()
         return result[0] if result else None
 
     def add_file_to_chat(self, chat_id: int, file_name: str, file_path: str):
-        with psycopg2.connect(**self.conn_params) as conn:
+        with self.get_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(
                     "INSERT INTO chat_files (chat_id, file_name, file_path) VALUES (%s, %s, %s)",

@@ -1,7 +1,4 @@
 import React from "react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faFile, faRemove } from "@fortawesome/free-solid-svg-icons";
-import { formatFileSize } from "../utils/helpers";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB in bytes
 
@@ -15,16 +12,7 @@ const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB in bytes
  * @param {Function} onRemoveFile - Callback function untuk menghapus file
  * @param {Function} onPreviewFile - Callback function untuk preview file
  */
-function FileUpload({
-  currentFiles,
-  onFileUpload,
-  onRemoveFile,
-  onPreviewFile,
-}) {
-  /**
-   * Menangani perubahan pada input file
-   * @param {Event} e - Event objek
-   */
+function FileUpload({ onFileUpload }) {
   const handleFileChange = (e) => {
     const newFiles = Array.from(e.target.files);
     const validFiles = newFiles.filter((file) => {
@@ -49,11 +37,6 @@ function FileUpload({
     e.target.value = ""; // Reset file input
   };
 
-  /**
-   * Memeriksa apakah tipe file diizinkan
-   * @param {File} file - File yang akan diperiksa
-   * @returns {boolean}
-   */
   const isAllowedFileType = (file) => {
     const allowedTypes = [
       "image/jpeg",
@@ -65,41 +48,13 @@ function FileUpload({
   };
 
   return (
-    <div>
-      <input
-        type="file"
-        id="file-input"
-        style={{ display: "none" }}
-        onChange={handleFileChange}
-        multiple
-      />
-
-      <div className="file-bubbles-container">
-        {currentFiles.map((file, index) => (
-          <div
-            key={index}
-            className="file-bubble"
-            onClick={() => onPreviewFile(file)}
-          >
-            <div className="file-info">
-              <FontAwesomeIcon icon={faFile} className="i" />
-              <span className="file-name">{file.name}</span>
-              <span className="file-size">({formatFileSize(file.size)})</span>
-            </div>
-            <div className="file-actions">
-              <FontAwesomeIcon
-                icon={faRemove}
-                className="i"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onRemoveFile(file);
-                }}
-              />
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
+    <input
+      type="file"
+      id="file-input"
+      style={{ display: "none" }}
+      onChange={handleFileChange}
+      multiple
+    />
   );
 }
 

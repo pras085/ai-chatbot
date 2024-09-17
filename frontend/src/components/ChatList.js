@@ -3,6 +3,7 @@ import "../styles/ChatList.css";
 import { createNewChat } from "../services/api";
 
 const ChatList = ({ chats = [], onSelectChat, onNewChat, userId }) => {
+  console.log("Chats received:", chats);
   const [isCreatingChat, setIsCreatingChat] = useState(false);
 
   const handleCreateNewChat = async () => {
@@ -10,14 +11,9 @@ const ChatList = ({ chats = [], onSelectChat, onNewChat, userId }) => {
 
     try {
       const newChat = await createNewChat(userId);
-      console.log("New chat created:", newChat); // Tambahkan log ini
-      if (newChat && newChat.id) {
-        console.log(" created:", newChat); // Tambahkan log ini
-
-        onNewChat(newChat);
-      } else {
-        throw new Error("Invalid chat data received");
-      }
+      console.log("New chat created:", newChat);
+      onNewChat(newChat);
+      onSelectChat(newChat.id);
     } catch (error) {
       console.error("Error creating new chat:", error);
       alert("Failed to create new chat. Please try again.");
@@ -29,6 +25,7 @@ const ChatList = ({ chats = [], onSelectChat, onNewChat, userId }) => {
   const getAvatarText = (title) => {
     return title && typeof title === "string" ? title[0].toUpperCase() : "n";
   };
+
   return (
     <div className="chat-list-container">
       <button

@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import ChatList from "./ChatList";
-import { getUserChats, createNewChat } from "../services/api";
+import { getUserChats } from "../services/api";
 import ChatContainer from "../components/ChatContainer";
 /**
  * ChatApp Component
@@ -13,56 +13,45 @@ import ChatContainer from "../components/ChatContainer";
  */
 function ChatApp({ userId }) {
   const [currentView, setCurrentView] = useState("list");
-  const [currentChatId, setCurrentChatId] = useState(null);
-  const [chats, setChats] = useState(null);
+  const [selectedChatId, setSelectedChatId] = useState(null);
+  const [chats, setChats] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-
-  useEffect(() => {
-    const initializeChats = async () => {
-      setIsLoading(true);
-      try {
-        let userChats = await getUserChats(userId);
-        // if (userChats.length === 0) {
-        //   const newChat = await createNewChat(userId);
-        //   if (newChat) userChats = [newChat];
-        // }
-        setChats(userChats);
-        setError(null);
-      } catch (err) {
-        setError("Failed to initialize chats. Please try again later.");
-        console.error(err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    initializeChats();
+  const fetchChats = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const userChats = await getUserChats(userId);
+      setChats(userChats);
+      setError(null);
+    } catch (err) {
+      setError("Failed to fetch chats. Please try again later.");
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+    }
   }, [userId]);
 
+  useEffect(() => {
+    fetchChats();
+  }, [fetchChats]);
+
   const handleSelectChat = (chatId) => {
-    console.log("Selecting chat:", chatId);
-    setCurrentChatId(chatId);
+    const numericChatId = Number(chatId);
+    console.log("Selecting chat:", numericChatId);
+    setSelectedChatId(numericChatId);
     setCurrentView("chat");
   };
 
-  const handleBackToList = () => {
+  const handleBackToList = useCallback(() => {
     setCurrentView("list");
-  };
+    fetchChats(); // Refresh the chat list when returning to it
+  }, [fetchChats]);
 
-  const handleNewChat = async () => {
-    try {
-      const newChat = await createNewChat(userId);
-      if (newChat && newChat.id) {
-        setChats((prevChats) => [...prevChats, newChat]);
-      } else {
-        throw new Error("Invalid chat data received");
-      }
-    } catch (error) {
-      console.error("Error creating new chat:", error);
-      setError("Failed to create new chat. Please try again.");
-    }
-  };
+  const handleNewChat = useCallback((newChat) => {
+    setChats((prevChats) => [newChat, ...prevChats]);
+    setSelectedChatId(newChat.id || newChat.chat_id);
+    setCurrentView("chat");
+  }, []);
 
   if (isLoading) return <div>Loading chats...</div>;
   if (error) return <div>{error}</div>;
@@ -78,7 +67,7 @@ function ChatApp({ userId }) {
         />
       ) : (
         <ChatContainer
-          chatId={currentChatId || null}
+          chatId={selectedChatId}
           onBackToList={handleBackToList}
           userId={userId}
         />

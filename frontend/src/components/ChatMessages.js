@@ -1,21 +1,19 @@
 import React, { useState, useEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
-import hljs from "highlight.js";
-import "highlight.js/styles/sunburst.css";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCopy, faRedo } from "@fortawesome/free-solid-svg-icons";
-import DOMPurify from "dompurify";
+import {
+  faCopy,
+  faRedo,
+  faChevronDown,
+  faChevronUp,
+} from "@fortawesome/free-solid-svg-icons";
+import rehypeRaw from "rehype-raw";
+import remarkGfm from "remark-gfm";
 
-// Komponen untuk menangani render kode dengan Markdown dan membuatnya collapsible
 const RenderCodeBlock = ({ language, value }) => {
-  const [isCollapsed, setIsCollapsed] = useState(true);
-  const codeRef = useRef(null);
-
-  useEffect(() => {
-    if (codeRef.current && !isCollapsed) {
-      hljs.highlightElement(codeRef.current);
-    }
-  }, [value, isCollapsed]);
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   const toggleCollapse = () => {
     setIsCollapsed(!isCollapsed);
@@ -33,34 +31,36 @@ const RenderCodeBlock = ({ language, value }) => {
   };
 
   return (
-    <div className="collapsible-code-block">
-      <div
-        className="collapsible-header"
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-        }}
-      >
-        <div>
-          <span className="language-label">{language || "plaintext"}</span>
-          <button className="toggle-btn" onClick={toggleCollapse}>
-            {isCollapsed ? "Show code" : "Hide code"}
-          </button>
-        </div>
-        {!isCollapsed && (
-          <FontAwesomeIcon
-            icon={faCopy}
-            className="copy-icon"
+    <div className="code-block">
+      <div className="code-header">
+        <span className="language-label">{language || "plaintext"}</span>
+        <div className="code-actions">
+          <button
+            className="action-button"
             onClick={handleCopy}
             title="Copy code"
-          />
-        )}
+          >
+            <FontAwesomeIcon icon={faCopy} />
+          </button>
+          <button
+            className="action-button"
+            onClick={toggleCollapse}
+            title={isCollapsed ? "Expand" : "Collapse"}
+          >
+            <FontAwesomeIcon icon={isCollapsed ? faChevronDown : faChevronUp} />
+          </button>
+        </div>
       </div>
       {!isCollapsed && (
-        <pre className="hljs">
-          <code ref={codeRef}>{value}</code>
-        </pre>
+        <div className="code-content">
+          <SyntaxHighlighter
+            language={language}
+            style={vscDarkPlus}
+            customStyle={{ margin: 0, borderRadius: "0 0 4px 4px" }}
+          >
+            {value}
+          </SyntaxHighlighter>
+        </div>
       )}
     </div>
   );
@@ -76,7 +76,6 @@ function ChatMessages({ messages, onPreviewFile, onRetry }) {
   };
 
   useEffect(() => {
-    // Scroll ke pesan terbaru
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
@@ -121,17 +120,18 @@ function ChatMessages({ messages, onPreviewFile, onRetry }) {
           )}
         </div>
       ))}
+      <div ref={messagesEndRef} />
     </div>
   );
 }
 
-// Komponen untuk pesan
 const Message = ({ content }) => {
-  const sanitizedContent = DOMPurify.sanitize(content);
   return (
     <ReactMarkdown
+      remarkPlugins={[remarkGfm]}
+      rehypePlugins={[rehypeRaw]}
       components={{
-        code({ inline, className, children, ...props }) {
+        code({ node, inline, className, children, ...props }) {
           const match = /language-(\w+)/.exec(className || "");
           return !inline && match ? (
             <RenderCodeBlock
@@ -139,14 +139,25 @@ const Message = ({ content }) => {
               value={String(children).replace(/\n$/, "")}
             />
           ) : (
-            <code className={className} {...props}>
+            <code className={"inline-code"} {...props}>
               {children}
             </code>
           );
         },
+        h1: ({ node, ...props }) => <h1 className="markdown-h1" {...props} />,
+        h2: ({ node, ...props }) => <h2 className="markdown-h2" {...props} />,
+        h3: ({ node, ...props }) => <h3 className="markdown-h3" {...props} />,
+        ul: ({ node, ...props }) => <ul className="markdown-ul" {...props} />,
+        ol: ({ node, ...props }) => <ol className="markdown-ol" {...props} />,
+        li: ({ node, ...props }) => <li className="markdown-li" {...props} />,
+        p: ({ node, ...props }) => <p className="markdown-p" {...props} />,
+        a: ({ node, ...props }) => <a className="markdown-a" {...props} />,
+        blockquote: ({ node, ...props }) => (
+          <blockquote className="markdown-blockquote" {...props} />
+        ),
       }}
     >
-      {sanitizedContent}
+      {content}
     </ReactMarkdown>
   );
 };

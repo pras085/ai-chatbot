@@ -3,7 +3,8 @@ import ReactMarkdown from "react-markdown";
 import hljs from "highlight.js";
 import "highlight.js/styles/sunburst.css";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCopy } from "@fortawesome/free-solid-svg-icons";
+import { faCopy, faRedo } from "@fortawesome/free-solid-svg-icons";
+import DOMPurify from "dompurify";
 
 // Komponen untuk menangani render kode dengan Markdown dan membuatnya collapsible
 const RenderCodeBlock = ({ language, value }) => {
@@ -65,8 +66,14 @@ const RenderCodeBlock = ({ language, value }) => {
   );
 };
 
-const ChatMessages = ({ messages, onPreviewFile }) => {
+function ChatMessages({ messages, onPreviewFile, onRetry }) {
   const messagesEndRef = useRef(null);
+
+  const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text).then(() => {
+      alert("Pesan berhasil disalin!");
+    });
+  };
 
   useEffect(() => {
     // Scroll ke pesan terbaru
@@ -75,24 +82,52 @@ const ChatMessages = ({ messages, onPreviewFile }) => {
 
   return (
     <div id="chat-messages">
-      {messages.map((msg, index) => (
-        <div key={index} className={`message ${msg.type}`}>
-          <Message content={msg.content} />
-          {msg.file && (
+      {messages.map((message, index) => (
+        <div key={index} className={`message ${message.type}`}>
+          <Message content={message.content} />
+          {message.type === "bot-message" && (
+            <div className="message-actions">
+              <button
+                onClick={() => copyToClipboard(message.content)}
+                className="action-button"
+                title="Salin pesan"
+              >
+                <FontAwesomeIcon icon={faCopy} />
+              </button>
+              <button
+                onClick={() => onRetry(index)}
+                className="action-button"
+                title="Ulangi generasi"
+              >
+                <FontAwesomeIcon icon={faRedo} />
+              </button>
+            </div>
+          )}
+          {message.file && (
             <div className="file-attachment">
-              <span>{msg.file.name}</span>
-              <button onClick={() => onPreviewFile(msg.file)}>Preview</button>
+              {message.file.type.startsWith("image/") ? (
+                <img
+                  src={URL.createObjectURL(message.file)}
+                  alt="Uploaded"
+                  className="uploaded-image"
+                  onClick={() => onPreviewFile(message.file)}
+                />
+              ) : (
+                <span onClick={() => onPreviewFile(message.file)}>
+                  {message.file.name}
+                </span>
+              )}
             </div>
           )}
         </div>
       ))}
-      <div ref={messagesEndRef} />
     </div>
   );
-};
+}
 
 // Komponen untuk pesan
 const Message = ({ content }) => {
+  const sanitizedContent = DOMPurify.sanitize(content);
   return (
     <ReactMarkdown
       components={{
@@ -111,7 +146,7 @@ const Message = ({ content }) => {
         },
       }}
     >
-      {content}
+      {sanitizedContent}
     </ReactMarkdown>
   );
 };

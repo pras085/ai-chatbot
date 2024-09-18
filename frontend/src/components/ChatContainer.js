@@ -66,7 +66,7 @@ function ChatContainer({ chatId, onBackToList, userId }) {
   };
 
   const sendMessage = useCallback(
-    async (message) => {
+    async (message, file) => {
       // if (chatId === undefined) {
       //   console.error("Cannot send message: chatId is undefined");
       //   return;
@@ -83,7 +83,11 @@ function ChatContainer({ chatId, onBackToList, userId }) {
 
       setMessages((prev) => [
         ...prev,
-        { type: "user-message", content: message, file: currentFiles[0] },
+        {
+          type: "user-message",
+          content: message,
+          file: file || currentFiles[0],
+        },
       ]);
       setIsGenerating(true);
 
@@ -106,9 +110,9 @@ function ChatContainer({ chatId, onBackToList, userId }) {
           if (done) break;
 
           const chunk = decoder.decode(value, { stream: true });
-          let processedChunk = escapeHTML(chunk);
+          // let processedChunk = escapeHTML(chunk);
 
-          fullResponse += processedChunk;
+          fullResponse += chunk;
 
           setMessages((prev) => {
             const newMessages = [...prev];
@@ -159,21 +163,42 @@ function ChatContainer({ chatId, onBackToList, userId }) {
     setPreviewFile(file);
   }, []);
 
+  const handleRetry = useCallback(
+    (messageIndex) => {
+      const messageToRetry = messages[messageIndex];
+      if (messageToRetry.type === "user-message") {
+        // Ambil pesan user sebelum pesan bot yang ingin di-retry
+        sendMessage(messageToRetry.content, messageToRetry.file);
+      }
+    },
+    [messages, sendMessage]
+  );
+
   if (isLoading) return <div>Loading chat...</div>;
   if (error) return <div>{error}</div>;
 
   return (
     <div id="chat-container">
-      <button onClick={onBackToList}>Back to Chat List</button>
-      <ChatMessages messages={messages} onPreviewFile={handlePreviewFile} />
-      <FileUpload onFileUpload={handleFileUpload} />
-      <UserInput
-        onSendMessage={sendMessage}
-        isGenerating={isGenerating}
-        currentFiles={currentFiles}
-        onRemoveFile={handleRemoveFile}
-        onPreviewFile={handlePreviewFile}
-      />
+      <button className="back-button" onClick={onBackToList}>
+        Back to Chat List
+      </button>
+      <div id="chat-messages-container">
+        <ChatMessages
+          messages={messages}
+          onPreviewFile={handlePreviewFile}
+          onRetry={handleRetry}
+        />
+      </div>
+      <div id="chat-input-area">
+        <FileUpload onFileUpload={handleFileUpload} />
+        <UserInput
+          onSendMessage={sendMessage}
+          isGenerating={isGenerating}
+          currentFiles={currentFiles}
+          onRemoveFile={handleRemoveFile}
+          onPreviewFile={handlePreviewFile}
+        />
+      </div>
       {previewFile && (
         <PreviewModal file={previewFile} onClose={() => setPreviewFile(null)} />
       )}

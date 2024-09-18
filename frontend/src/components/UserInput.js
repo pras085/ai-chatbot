@@ -32,8 +32,8 @@ function UserInput({
    */
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (message.trim() || isGenerating) {
-      onSendMessage(message);
+    if (message.trim() || currentFiles.length > 0 || isGenerating) {
+      onSendMessage(message, currentFiles[0]);
       setMessage("");
     }
   };
@@ -48,7 +48,15 @@ function UserInput({
               className="file-bubble"
               onClick={() => onPreviewFile(file)}
             >
-              <FontAwesomeIcon icon={faFile} className="i" />
+              {file.type.startsWith("image/") ? (
+                <img
+                  src={URL.createObjectURL(file)}
+                  alt="Preview"
+                  className="file-preview"
+                />
+              ) : (
+                <FontAwesomeIcon icon={faFile} className="i" />
+              )}
               <span className="file-name">{file.name}</span>
               <span className="file-size">({formatFileSize(file.size)})</span>
               <FontAwesomeIcon

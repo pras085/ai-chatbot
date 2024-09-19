@@ -8,11 +8,14 @@ from dotenv import load_dotenv
 from typing import List, Dict
 from datetime import datetime
 from fastapi.encoders import jsonable_encoder
+from knowledge_base import KnowledgeBase
+from config import Config
 
 
 load_dotenv()
 
 router = APIRouter()
+kb = KnowledgeBase()
 
 UPLOAD_DIRECTORY = os.getenv("UPLOAD_FOLDER")
 DEFAULT_USER = os.getenv("DEFAULT_USER", "1")
@@ -188,3 +191,23 @@ async def create_new_chat(user_id: str = DEFAULT_USER):
     except Exception as e:
         logging.error(f"Error in create_new_chat endpoint: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+
+@router.post("/knowledge_base/add")
+async def add_knowledge_base_item(
+    question: str = Form(...), answer: str = Form(...), image: UploadFile = File(None)
+):
+    try:
+        kb.add_item(question, answer, image)
+        return {"message": "Item added successfully"}
+    except Exception as e:
+        logging.error(f"Error add knowledge_base : {str(e)}", exc_info=True)
+        raise
+
+
+@router.get("/uploads/knowledge_base_images/{filename}")
+async def get_knowledge_base_image(filename: str):
+    file_path = os.path.join(Config.IMAGE_UPLOAD_FOLDER, filename)
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=500, detail="Image not found")
+    return FileResponse(file_path)

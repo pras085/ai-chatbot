@@ -3,6 +3,9 @@ import psycopg2
 from psycopg2.extras import DictCursor
 from typing import Dict, List, Any
 import logging
+from werkzeug.utils import secure_filename
+from config import Config
+
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +38,8 @@ class KnowledgeBase:
                     CREATE TABLE IF NOT EXISTS knowledge_base (
                         id SERIAL PRIMARY KEY,
                         question TEXT NOT NULL,
-                        answer TEXT NOT NULL
+                        answer TEXT NOT NULL,
+                        image_path TEXT
                     )
                 """)
                 cur.execute("""
@@ -66,7 +70,7 @@ class KnowledgeBase:
                 """)
             conn.commit()
 
-    def add_item(self, question: str, answer: str):
+    def add_item(self, question, answer, image=None):
         """
         Menambahkan item baru ke knowledge base.
 
@@ -74,13 +78,25 @@ class KnowledgeBase:
             question (str): Pertanyaan untuk ditambahkan.
             answer (str): Jawaban yang sesuai dengan pertanyaan.
         """
+        image_path = None
+        if image:
+            filename = secure_filename(image.filename)
+            image_path = os.path.join(Config.IMAGE_UPLOAD_FOLDER, filename)
+            os.makedirs(os.path.dirname(image_path), exist_ok=True)
+            image.save(image_path)
+
         with self.get_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(
-                    "INSERT INTO knowledge_base (question, answer) VALUES (%s, %s)",
-                    (question, answer),
+                    "INSERT INTO knowledge_base (question, answer, image_path) VALUES (%s, %s, %s)",
+                    (question, answer, image_path),
                 )
             conn.commit()
+
+    def get_image_url(self, image_path):
+        if image_path:
+            return f"/uploads/knowledge_base_images/{os.path.basename(image_path)}"
+        return None
 
     def get_all_items(self) -> List[Dict[str, str]]:
         """
@@ -118,10 +134,13 @@ class KnowledgeBase:
         with self.get_connection() as conn:
             with conn.cursor(cursor_factory=DictCursor) as cur:
                 cur.execute(
-                    "SELECT question, answer FROM knowledge_base WHERE question ILIKE %s OR answer ILIKE %s",
+                    "SELECT question, answer, image_path FROM knowledge_base WHERE question ILIKE %s OR answer ILIKE %s",
                     (f"%{query}%", f"%{query}%"),
                 )
-                return [dict(row) for row in cur.fetchall()]
+                results = [dict(row) for row in cur.fetchall()]
+                for item in results:
+                    item["image_url"] = self.get_image_url(item["image_path"])
+                return results
 
     def create_chat(self, user_id: str) -> int:
         """

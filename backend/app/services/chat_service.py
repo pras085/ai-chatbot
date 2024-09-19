@@ -5,6 +5,7 @@ import asyncio
 import logging
 from typing import List, Dict, Any
 from knowledge_base import KnowledgeBase
+import json
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -54,6 +55,18 @@ async def process_chat_message(
             logger.info(f"First message for chat {chat_id}, updating title")
             update_chat_title(chat_id, title)
 
+        kb_results = kb.search_items(message)
+        if kb_results:
+            kb_response = kb_results[0]
+            response = f"{kb_response.get('answer', '')}"
+
+            if kb_response.get("image_path"):
+                response += f"\n {kb_response['image_path']}"
+
+            kb.add_message(chat_id, response, is_user=False)
+            yield response
+            return
+
         file_info = None
         if file_path:
             logger.info(f"Processing file: {file_path}")
@@ -64,15 +77,19 @@ async def process_chat_message(
 
         full_message = f"{message}\n\n{file_info}" if file_info else message
 
-        logger.info(f"Adding user message to chat {chat_id}")
-        kb.add_message(chat_id, full_message, is_user=True)
-
         logger.info(
             f"Starting chat with retry stream for user {user_id}, chat {chat_id}"
         )
-
+        bot_response = ""
         async for chunk in chat_with_retry_stream(user_id, chat_id, full_message):
+            bot_response += chunk
             yield chunk
+
+        if bot_response:
+            logger.info(f"Adding user message to chat {chat_id}")
+            kb.add_message(chat_id, full_message, is_user=True)
+            logger.info(f"Adding bot response to chat {chat_id}")
+            kb.add_message(chat_id, bot_response, is_user=False)
 
     except ValueError as ve:
         logger.error(f"ValueError in process_chat: {str(ve)}")
@@ -136,19 +153,20 @@ async def chat_with_retry_stream(user_id: str, chat_id: int, message: str):
             logger.info(
                 f"Retrieved {len(knowledge_base_items)} items from knowledge base"
             )
-            logger.debug(f"Knowledge base items: {knowledge_base_items}")
 
             knowledge_str = ""
             if knowledge_base_items:
                 knowledge_str = "\n".join(
                     [
-                        f"Q: {item['question']}\nA: {item['answer']}"
+                        f"Q: {item.get('question', '')}\nA: {item.get('answer', '')}"
+                        + (
+                            f"\nImage: {item.get('image_path', '')}"
+                            if item.get("image_path")
+                            else ""
+                        )
                         for item in knowledge_base_items
                     ]
                 )
-                logger.info("Knowledge string created successfully")
-            else:
-                logger.warning("Knowledge base is empty.")
 
             system_message = f"""Anda adalah asisten AI untuk muatmuat.com. Gunakan informasi berikut untuk menjawab pertanyaan:
             
@@ -159,45 +177,60 @@ async def chat_with_retry_stream(user_id: str, chat_id: int, message: str):
             Kamu tetap harus meyakinkan user bahwa kamu masih bisa menjawab pertanyaan lain"""
 
             messages = []
+            last_role = None
             for msg in chat_history:
-                if msg["is_user"]:
-                    messages.append({"role": "user", "content": msg["content"]})
-                else:
-                    messages.append({"role": "assistant", "content": msg["content"]})
+                role = "user" if msg["is_user"] else "assistant"
+                if role == last_role == "user":
+                    # Jika ada dua pesan user berturut-turut, tambahkan pesan kosong dari assistant
+                    messages.append(
+                        {
+                            "role": "assistant",
+                            "content": "I'm processing your previous message.",
+                        }
+                    )
+                messages.append({"role": role, "content": msg["content"]})
+                last_role = role
 
-            if not chat_history or not chat_history[-1]["is_user"]:
+            # Pastikan pesan terakhir adalah dari user
+            if not messages or messages[-1]["role"] != "user":
+                messages.append({"role": "user", "content": message})
+            elif message and messages[-1]["content"] != message:
+                # Jika pesan baru berbeda dari pesan terakhir, tambahkan sebagai pesan baru
                 messages.append({"role": "user", "content": message})
 
             logger.info(f"Prepared {len(messages)} messages for API request")
-            logger.debug(f"Messages: {messages}")  # Tambahkan ini untuk debugging
-            logger.info(
-                f"Sending request to Anthropic API for user {user_id}, chat {chat_id}"
-            )
-            async with AsyncAnthropic(api_key=CLAUDE_API_KEY) as client:
-                stream = await client.messages.create(
-                    model="claude-3-sonnet-20240229",
-                    messages=messages,
-                    system=system_message,
-                    max_tokens=1000,
-                    temperature=0,
-                    stream=True,
-                )
+            logger.debug(f"Messages: {json.dumps(messages, indent=2)}")
 
-                full_response = ""
+            try:
+                async with AsyncAnthropic(api_key=CLAUDE_API_KEY) as client:
+                    stream = await client.messages.create(
+                        model="claude-3-sonnet-20240229",
+                        messages=messages,
+                        system=system_message,  # Gunakan system_message sebagai parameter terpisah
+                        max_tokens=1000,
+                        temperature=0,
+                        stream=True,
+                    )
+
+                    full_response = ""
+                    logger.info(
+                        f"Starting to process stream response for user {user_id}, chat {chat_id}"
+                    )
+                    async for chunk in stream:
+                        if chunk.type == "content_block_delta":
+                            full_response += chunk.delta.text
+                            yield chunk.delta.text
+
                 logger.info(
-                    f"Starting to process stream response for user {user_id}, chat {chat_id}"
+                    f"Finished processing stream response for user {user_id}, chat {chat_id}"
                 )
-                async for chunk in stream:
-                    if chunk.type == "content_block_delta":
-                        full_response += chunk.delta.text
-                        yield chunk.delta.text
+                return
+            except Exception as e:
+                logger.error(
+                    f"Error in API request for user {user_id}: {str(e)}", exc_info=True
+                )
+                raise
 
-            logger.info(
-                f"Finished processing stream response for user {user_id}, chat {chat_id}"
-            )
-            logger.info(f"Saving bot response to database for chat {chat_id}")
-            kb.add_message(chat_id, full_response, is_user=False)
-            return
         except Exception as e:
             logger.error(f"Unhandled error for user {user_id}: {str(e)}", exc_info=True)
             if attempt == max_retries - 1:

@@ -4,7 +4,6 @@ import ChatMessages from "./ChatMessages";
 import UserInput from "./UserInput";
 import FileUpload from "./FileUpload";
 import PreviewModal from "./PreviewModal";
-import { escapeHTML } from "../utils/helpers";
 import { sendChatMessage, getChatMessages } from "../services/api";
 
 /**
@@ -93,6 +92,7 @@ function ChatContainer({ chatId, onBackToList, userId }) {
 
       try {
         abortController.current = new AbortController();
+        console.log("message: ", message);
         const response = await sendChatMessage(
           userId,
           chatId,

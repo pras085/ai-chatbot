@@ -10,6 +10,9 @@ class Config:
     # Direktori untuk menyimpan file yang diunggah
     UPLOAD_FOLDER = os.path.join(os.getcwd(), "uploads")
 
+    # Direktori untuk menyimpan file knowledge
+    IMAGE_UPLOAD_FOLDER = os.path.join(UPLOAD_FOLDER, "knowledge_base_images")
+
     # Batas maksimum ukuran konten (5 MB)
     MAX_CONTENT_LENGTH = os.getenv("MAX_CONTENT_LENGTH", 5 * 1024 * 1024)
 

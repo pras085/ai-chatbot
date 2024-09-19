@@ -1,5 +1,4 @@
 import os
-import anthropic
 from anthropic import AsyncAnthropic
 from config import Config
 import asyncio

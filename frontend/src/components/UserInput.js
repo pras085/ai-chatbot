@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faPaperPlane,
@@ -25,6 +25,25 @@ function UserInput({
   onPreviewFile,
 }) {
   const [message, setMessage] = useState("");
+  const textareaRef = useRef(null);
+
+  useEffect(() => {
+    adjustTextareaHeight();
+  }, [message]);
+
+  const adjustTextareaHeight = () => {
+    const textarea = textareaRef.current;
+    if (textarea) {
+      textarea.style.height = "auto";
+      const scrollHeight = textarea.scrollHeight;
+
+      textarea.style.height = `${Math.min(scrollHeight, 150)}px`; // Max height 150px
+    }
+  };
+
+  const handleChange = (e) => {
+    setMessage(e.target.value);
+  };
 
   /**
    * Menangani pengiriman pesan
@@ -32,7 +51,7 @@ function UserInput({
    */
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (message.trim() || currentFiles.length > 0 || isGenerating) {
+    if (!isGenerating && message.trim()) {
       onSendMessage(message, currentFiles[0]);
       setMessage("");
     }
@@ -70,14 +89,20 @@ function UserInput({
             </div>
           ))}
         </div>
-        <input
-          type="text"
+        <textarea
+          ref={textareaRef}
           id="message-input"
           value={message}
-          onChange={(e) => setMessage(e.target.value)}
+          onChange={handleChange}
           autoComplete="off"
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              handleSubmit(e);
+            }
+          }}
           placeholder="Type your message..."
-        />
+        />{" "}
       </div>
       <button
         type="button"

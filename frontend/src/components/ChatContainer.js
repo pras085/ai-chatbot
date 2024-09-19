@@ -163,16 +163,17 @@ function ChatContainer({ chatId, onBackToList, userId }) {
     setPreviewFile(file);
   }, []);
 
-  const handleRetry = useCallback(
-    (messageIndex) => {
-      const messageToRetry = messages[messageIndex];
-      if (messageToRetry.type === "user-message") {
-        // Ambil pesan user sebelum pesan bot yang ingin di-retry
-        sendMessage(messageToRetry.content, messageToRetry.file);
-      }
-    },
-    [messages, sendMessage]
-  );
+  // const handleRetry = useCallback(
+  //   (messageIndex) => {
+  //     console.log("index", messages[messageIndex]);
+  //     const messageToRetry = messages[messageIndex];
+  //     if (messageToRetry.type === "bot-message") {
+  //       // Ambil pesan user sebelum pesan bot yang ingin di-retry
+  //       sendMessage(messageToRetry.content, messageToRetry.file);
+  //     }
+  //   },
+  //   [messages, sendMessage]
+  // );
 
   if (isLoading) return <div>Loading chat...</div>;
   if (error) return <div>{error}</div>;
@@ -186,19 +187,17 @@ function ChatContainer({ chatId, onBackToList, userId }) {
         <ChatMessages
           messages={messages}
           onPreviewFile={handlePreviewFile}
-          onRetry={handleRetry}
+          // onRetry={handleRetry}
         />
       </div>
-      <div id="chat-input-area">
-        <FileUpload onFileUpload={handleFileUpload} />
-        <UserInput
-          onSendMessage={sendMessage}
-          isGenerating={isGenerating}
-          currentFiles={currentFiles}
-          onRemoveFile={handleRemoveFile}
-          onPreviewFile={handlePreviewFile}
-        />
-      </div>
+      <FileUpload onFileUpload={handleFileUpload} currentFiles={currentFiles} />
+      <UserInput
+        onSendMessage={sendMessage}
+        isGenerating={isGenerating}
+        currentFiles={currentFiles}
+        onRemoveFile={handleRemoveFile}
+        onPreviewFile={handlePreviewFile}
+      />
       {previewFile && (
         <PreviewModal file={previewFile} onClose={() => setPreviewFile(null)} />
       )}

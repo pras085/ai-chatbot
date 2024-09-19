@@ -66,7 +66,8 @@ const RenderCodeBlock = ({ language, value }) => {
   );
 };
 
-function ChatMessages({ messages, onPreviewFile, onRetry }) {
+// function ChatMessages({ messages, onPreviewFile, onRetry }) {
+function ChatMessages({ messages, onPreviewFile }) {
   const messagesEndRef = useRef(null);
 
   const copyToClipboard = (text) => {
@@ -93,13 +94,13 @@ function ChatMessages({ messages, onPreviewFile, onRetry }) {
               >
                 <FontAwesomeIcon icon={faCopy} />
               </button>
-              <button
+              {/* <button
                 onClick={() => onRetry(index)}
                 className="action-button"
                 title="Ulangi generasi"
               >
                 <FontAwesomeIcon icon={faRedo} />
-              </button>
+              </button> */}
             </div>
           )}
           {message.file && (

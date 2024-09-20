@@ -24,10 +24,10 @@ function FileUpload({ onFileUpload, currentFiles }) {
       return;
     }
     const validFiles = newFiles.filter((file) => {
-      if (!isAllowedFileType(file)) {
-        alert(`File type not allowed: ${file.name}`);
-        return false;
-      }
+      // if (!isAllowedFileType(file)) {
+      //   alert(`File type not allowed: ${file.name}`);
+      //   return false;
+      // }
       if (file.size > MAX_FILE_SIZE) {
         alert(
           `File too large: ${file.name}. Maximum size is ${

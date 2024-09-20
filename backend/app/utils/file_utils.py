@@ -34,8 +34,8 @@ async def save_uploaded_file(file: UploadFile) -> str:
     if not os.path.exists(UPLOAD_FOLDER):
         os.makedirs(UPLOAD_FOLDER)
 
-    if not is_allowed_file(file.filename):
-        raise ValueError("File type not allowed")
+    # if not is_allowed_file(file.filename):
+    #     raise ValueError("File type not allowed")
 
     file_path = os.path.join(UPLOAD_FOLDER, file.filename)
     with open(file_path, "wb") as buffer:

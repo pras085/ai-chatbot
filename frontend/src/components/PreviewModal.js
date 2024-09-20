@@ -30,17 +30,11 @@ function PreviewModal({ file, onClose }) {
           reader.onload = (e) =>
             setPreview({ type: "image", content: e.target.result });
           reader.readAsDataURL(file);
-        } else if (
-          file.type === "text/plain" ||
-          file.type === "application/json" ||
-          file.type === "text/html"
-        ) {
+        } else {
           const reader = new FileReader();
           reader.onload = (e) =>
             setPreview({ type: "text", content: e.target.result });
           reader.readAsText(file);
-        } else {
-          setPreview({ type: "unsupported" });
         }
       }
     }
@@ -62,8 +56,9 @@ function PreviewModal({ file, onClose }) {
           <p>Preview not available for this file type.</p>
         )}
         <div id="preview-info">
-          File Name: {file.name}, Size: {formatFileSize(file.size)}
-        </div>
+          <span className="text-bold">File Name</span>: {file.name}, {""}
+          <span className="text-bold">Size</span>: {formatFileSize(file.size)}
+        </div>{" "}
       </div>
     </div>
   );

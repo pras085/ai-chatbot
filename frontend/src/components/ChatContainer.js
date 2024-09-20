@@ -66,11 +66,6 @@ function ChatContainer({ chatId, onBackToList, userId }) {
 
   const sendMessage = useCallback(
     async (message, file) => {
-      // if (chatId === undefined) {
-      //   console.error("Cannot send message: chatId is undefined");
-      //   return;
-      // }
-
       if (!message && currentFiles.length === 0 && !isGenerating) return;
 
       if (isGenerating) {
@@ -187,6 +182,7 @@ function ChatContainer({ chatId, onBackToList, userId }) {
         <ChatMessages
           messages={messages}
           onPreviewFile={handlePreviewFile}
+          isGenerating={isGenerating}
           // onRetry={handleRetry}
         />
       </div>

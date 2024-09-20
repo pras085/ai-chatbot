@@ -5,15 +5,17 @@ import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faCopy,
-  faRedo,
+  faSpinner,
   faChevronDown,
   faChevronUp,
+  faCode,
 } from "@fortawesome/free-solid-svg-icons";
 import rehypeRaw from "rehype-raw";
 import remarkGfm from "remark-gfm";
 
 const RenderCodeBlock = ({ language, value }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const toggleCollapse = () => {
     setIsCollapsed(!isCollapsed);
@@ -22,7 +24,8 @@ const RenderCodeBlock = ({ language, value }) => {
   const handleCopy = () => {
     navigator.clipboard.writeText(value).then(
       () => {
-        alert("Code copied to clipboard!");
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
       },
       (err) => {
         console.error("Failed to copy: ", err);
@@ -33,14 +36,18 @@ const RenderCodeBlock = ({ language, value }) => {
   return (
     <div className="code-block">
       <div className="code-header">
-        <span className="language-label">{language || "plaintext"}</span>
+        <div className="language-info">
+          <FontAwesomeIcon icon={faCode} className="language-icon" />
+          <span className="language-label">{language || "plaintext"}</span>
+        </div>
         <div className="code-actions">
           <button
             className="action-button"
             onClick={handleCopy}
-            title="Copy code"
+            title={copied ? "Copied!" : "Copy code"}
           >
             <FontAwesomeIcon icon={faCopy} />
+            {copied ? " Copied!" : ""}
           </button>
           <button
             className="action-button"
@@ -57,6 +64,8 @@ const RenderCodeBlock = ({ language, value }) => {
             language={language}
             style={vscDarkPlus}
             customStyle={{ margin: 0, borderRadius: "0 0 4px 4px" }}
+            showLineNumbers={true}
+            wrapLines={true}
           >
             {value}
           </SyntaxHighlighter>
@@ -66,8 +75,7 @@ const RenderCodeBlock = ({ language, value }) => {
   );
 };
 
-// function ChatMessages({ messages, onPreviewFile, onRetry }) {
-function ChatMessages({ messages, onPreviewFile }) {
+function ChatMessages({ messages, onPreviewFile, isGenerating }) {
   const messagesEndRef = useRef(null);
 
   const copyToClipboard = (text) => {
@@ -90,17 +98,10 @@ function ChatMessages({ messages, onPreviewFile }) {
               <button
                 onClick={() => copyToClipboard(message.content)}
                 className="action-button"
-                title="Salin pesan"
+                data-tooltip="Salin pesan"
               >
                 <FontAwesomeIcon icon={faCopy} />
               </button>
-              {/* <button
-                onClick={() => onRetry(index)}
-                className="action-button"
-                title="Ulangi generasi"
-              >
-                <FontAwesomeIcon icon={faRedo} />
-              </button> */}
             </div>
           )}
           {message.file && (
@@ -119,6 +120,15 @@ function ChatMessages({ messages, onPreviewFile }) {
               )}
             </div>
           )}
+          {message.type === "bot-message" &&
+            index === messages.length - 1 &&
+            isGenerating && (
+              <FontAwesomeIcon
+                icon={faSpinner}
+                spin
+                className="loading-indicator"
+              />
+            )}
         </div>
       ))}
       <div ref={messagesEndRef} />

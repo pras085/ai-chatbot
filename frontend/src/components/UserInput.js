@@ -6,6 +6,7 @@ import {
   faPaperclip,
   faFile,
   faRemove,
+  faSpinner,
 } from "@fortawesome/free-solid-svg-icons";
 import { formatFileSize } from "../utils/helpers";
 
@@ -118,7 +119,11 @@ function UserInput({
         className={isGenerating ? "stop" : ""}
         data-tooltip={isGenerating ? "Stop generation" : "Send message"}
       >
-        <FontAwesomeIcon icon={isGenerating ? faStop : faPaperPlane} />
+        {isGenerating ? (
+          <FontAwesomeIcon icon={faSpinner} spin />
+        ) : (
+          <FontAwesomeIcon icon={isGenerating ? faStop : faPaperPlane} />
+        )}
       </button>
     </form>
   );

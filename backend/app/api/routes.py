@@ -193,6 +193,30 @@ async def create_new_chat(user_id: str = DEFAULT_USER):
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 
+@router.delete("/user/{user_id}/chats")
+async def delete_new_chat(user_id: str = DEFAULT_USER):
+    """
+    Endpoint untuk membuat chat baru untuk pengguna tertentu.
+
+    Args:
+        user_id (str): ID pengguna (default: DEFAULT_USER).
+
+    Returns:
+        Dict: Informasi tentang chat baru yang dibuat.
+    """
+    try:
+        new_chat = chat_service.create_new_chat(user_id)
+        return {
+            "id": new_chat["id"],
+            "user_id": new_chat["user_id"],
+            "title": "New Chat",
+            "created_at": datetime.now().isoformat(),
+        }
+    except Exception as e:
+        logging.error(f"Error in create_new_chat endpoint: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+
 @router.post("/knowledge_base/add")
 async def add_knowledge_base_item(
     question: str = Form(...), answer: str = Form(...), image: UploadFile = File(None)

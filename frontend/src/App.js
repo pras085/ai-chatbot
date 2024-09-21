@@ -1,27 +1,36 @@
-import ChatApp from "./components/ChatApp";
+import React from "react";
+import {
+  BrowserRouter as Router,
+  Route,
+  Routes,
+  Navigate,
+} from "react-router-dom";
+import ChatListPage from "./pages/ChatListPage";
+import ChatPage from "./pages/ChatPage";
 import "./styles/App.css";
 import "highlight.js/styles/sunburst.css";
-// import { v4 as uuidv4 } from "uuid"; // Pastikan untuk menginstal package uuid
-
-/**
- * App Component
- *
- * Komponen utama aplikasi yang menampung seluruh aplikasi chat.
- * Bertanggung jawab untuk:
- * - Menyediakan struktur dasar aplikasi
- * - Menginisialisasi dan menyimpan userId
- * - Merender komponen ChatApp yang mengelola seluruh fungsionalitas chat
- */
 
 function App() {
   const userId = "1";
+
   return (
-    <div className="App">
-      <header className="App-header">
-        <h1>Chatbot AI</h1>
-      </header>
-      <main>{userId && <ChatApp userId={userId} />}</main>
-    </div>
+    <Router>
+      <div className="App">
+        <header className="app-header">
+          <h1>Chatbot AI</h1>
+        </header>
+        <main>
+          <Routes>
+            <Route path="/chats" element={<ChatListPage userId={userId} />} />
+            <Route
+              path="/chat/:chatId"
+              element={<ChatPage userId={userId} />}
+            />
+            <Route path="/" element={<Navigate to="/chats" replace />} />{" "}
+          </Routes>
+        </main>
+      </div>
+    </Router>
   );
 }
 

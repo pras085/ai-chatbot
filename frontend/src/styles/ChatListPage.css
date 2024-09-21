@@ -3,7 +3,6 @@
   margin: 0 auto;
   padding: 20px;
   max-height: 80vh;
-  /* atau sesuaikan sesuai kebutuhan */
   overflow-y: auto;
 
 }
@@ -39,20 +38,22 @@
   display: flex;
   align-items: center;
   padding: 15px;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid #333;
   cursor: pointer;
-  transition: background-color 0.3s;
+  transition: background-color 0.1s;
+  background-color: #f8f9fa;
+
 }
 
 .chat-item:hover {
-  background-color: #f8f9fa;
+  background-color: #007bff;
 }
 
 .chat-avatar {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background-color: #007bff;
+  background-color: #333;
   color: white;
   display: flex;
   align-items: center;
@@ -66,7 +67,7 @@
 }
 
 .chat-title {
-  font-size: 18px;
+  font-size: 14px;
   font-weight: bold;
   color: #333;
   margin-bottom: 5px;

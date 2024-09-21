@@ -297,6 +297,10 @@ def create_new_chat(user_id: str):
     return kb.create_new_chat(user_id)
 
 
+def delte_chat(user_id: str):
+    return kb.delte_chat(user_id)
+
+
 def is_first_message(chat_id: int) -> bool:
     """
     Memeriksa apakah ini adalah pesan pertama dalam chat.

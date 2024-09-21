@@ -207,6 +207,16 @@ class KnowledgeBase:
         with self.get_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(
+                    "DELETE FROM chats (user_id) VALUES (%s) RETURNING id", (user_id,)
+                )
+                chat_id = cur.fetchone()[0]
+            conn.commit()
+        return {"id": chat_id, "user_id": user_id}
+
+    def create_new_chat(self, user_id: str):
+        with self.get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
                     "INSERT INTO chats (user_id) VALUES (%s) RETURNING id", (user_id,)
                 )
                 chat_id = cur.fetchone()[0]

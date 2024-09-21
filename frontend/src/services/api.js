@@ -120,3 +120,24 @@ export const uploadFile = async (file) => {
 
   return response.json();
 };
+
+/**
+ * Membuat chat baru untuk pengguna tertentu.
+ *
+ * @param {string} userId - ID pengguna
+ * @returns {Promise<Object>} - Objek berisi informasi chat baru
+ */
+export const deleteChat = async (userId) => {
+  try {
+    const response = await fetch(`/api/chats/${userId}`, {
+      method: "DELETE",
+    });
+    if (!response.ok) {
+      throw new Error("Network response was not ok");
+    }
+    return await response.json();
+  } catch (error) {
+    console.error("Error delete new chat:", error);
+    throw error;
+  }
+};

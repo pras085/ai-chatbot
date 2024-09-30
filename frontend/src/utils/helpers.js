@@ -29,3 +29,58 @@ export const formatDate = (dateString) => {
   const options = { year: "numeric", month: "short", day: "numeric" };
   return new Date(dateString).toLocaleDateString(undefined, options);
 };
+export const allowedExtensions = [
+  // Gambar
+  "jpg",
+  "jpeg",
+  "png",
+  "gif",
+  "svg",
+  // PDF
+  "pdf",
+  // Codingan
+  "txt",
+  "js",
+  "css",
+  "html",
+  "json",
+  "xml",
+  "py",
+  "java",
+  "cpp",
+  "c",
+  "h",
+  "cs",
+  "php",
+  "rb",
+  "go",
+  "ts",
+  "dart",
+];
+
+export function isAllowedFileType(file) {
+  const allowedMimeTypes = [
+    "image/jpeg",
+    "image/png",
+    "image/gif",
+    "image/svg+xml",
+    "application/pdf",
+    "text/plain",
+    "text/javascript",
+    "text/css",
+    "text/html",
+    "text/dart",
+    "application/json",
+    "application/xml",
+    "text/x-python",
+    "text/x-java",
+    "text/x-c++src",
+  ];
+
+  const fileExtension = file.name.split(".").pop().toLowerCase();
+
+  return (
+    allowedMimeTypes.includes(file.type) ||
+    allowedExtensions.includes(fileExtension)
+  );
+}

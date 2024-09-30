@@ -52,6 +52,8 @@ function ChatContainer({ chatId, onBackToList, userId }) {
         type: message.is_user ? "user-message" : "bot-message",
         content: message.content,
         timestamp: message.timestamp,
+        file_url: message.file_url,
+        file_name: message.file_name,
       }));
       console.info("messages:", formattedMessages);
       setMessages(formattedMessages);
@@ -66,7 +68,13 @@ function ChatContainer({ chatId, onBackToList, userId }) {
 
   const sendMessage = useCallback(
     async (message, file) => {
+      if (isGenerating) return;
       if (!message && currentFiles.length === 0 && !isGenerating) return;
+
+      let combinedMessage = message;
+      if (file) {
+        combinedMessage += `\n\n[File attached: ${file.name}]`;
+      }
 
       if (isGenerating) {
         if (abortController.current) {
@@ -79,7 +87,7 @@ function ChatContainer({ chatId, onBackToList, userId }) {
         ...prev,
         {
           type: "user-message",
-          content: message,
+          content: combinedMessage,
           file: file || currentFiles[0],
         },
       ]);

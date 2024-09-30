@@ -120,6 +120,7 @@ body {
 .file-bubbles-container {
     display: flex;
     flex-wrap: wrap;
+    gap: 8px;
 }
 
 .file-name {
@@ -304,7 +305,23 @@ body {
 }
 
 .file-attachment {
-    margin-top: 4px;
+    margin-top: 10px;
+}
+
+.file-attachment img.uploaded-image {
+    max-width: 200px;
+    max-height: 200px;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.file-attachment a {
+    display: inline-block;
+    padding: 5px 10px;
+    background-color: #f0f0f0;
+    border-radius: 5px;
+    text-decoration: none;
+    color: #333;
 }
 
 .loading-indicator {

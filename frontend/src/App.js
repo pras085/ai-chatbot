@@ -9,6 +9,7 @@ import ChatListPage from "./pages/ChatListPage";
 import ChatPage from "./pages/ChatPage";
 import "./styles/App.css";
 import "highlight.js/styles/sunburst.css";
+import { ReactComponent as MuatmuatIcon } from "./assets/logo-muatmuat.svg";
 
 function App() {
   const userId = "1";
@@ -17,7 +18,9 @@ function App() {
     <Router>
       <div className="App">
         <header className="app-header">
-          <h1>Chatbot AI</h1>
+          <div>
+            <MuatmuatIcon />
+          </div>
         </header>
         <main>
           <Routes>

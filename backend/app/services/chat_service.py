@@ -4,13 +4,16 @@ from config import Config
 import asyncio
 import logging
 from typing import List, Dict, Any
-from knowledge_base import KnowledgeBase
+from app.database import KnowledgeBase, ChatManager
+
 import json
 import base64
 
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+chat = ChatManager()
 
 CLAUDE_API_KEY = Config.CLAUDE_API_KEY
 if not CLAUDE_API_KEY:
@@ -30,15 +33,12 @@ async def process_chat_message(
     user_id: str, chat_id: int, message: str, file_path: str = None
 ):
     """
-    Memproses pesan chat dan file yang diunggah.
+    Memproses pesan chat dari pengguna dan menghasilkan respons.
 
     Args:
-        user_id (str): ID pengguna.
-        message (str): Pesan dari pengguna.
-        file_path (str, optional): Path file yang diunggah oleh pengguna.
-
-    Yields:
-        str: Respons dari model AI sebagai stream.
+        user_id (str): ID pengguna yang mengirim pesan.
+        chat_id (int): ID chat tempat pesan dikirim.
+        message (str): Isi pesan dari pengguna.
     """
     logger.info(f"Processing message for user {user_id}, chat {chat_id}")
     try:
@@ -47,9 +47,10 @@ async def process_chat_message(
                 "Pesan tidak boleh kosong dan tidak ada file yang diunggah"
             )
 
+        # Buat chat baru jika chat_id tidak ada (percakapan baru)
         if chat_id is None:
             logger.info(f"Creating new chat for user {user_id}")
-            chat_id = kb.create_chat(user_id)
+            chat_id = kb.create_new_chat(user_id)
 
         # Logika untuk menentukan judul chat berdasarkan pesan pertama
         if is_first_message(chat_id):
@@ -57,6 +58,14 @@ async def process_chat_message(
             logger.info(f"First message for chat {chat_id}, updating title")
             update_chat_title(chat_id, title)
 
+        # Ambil riwayat pesan dan cek apakah pesan terakhir adalah dari user
+        chat_history = chat.get_chat_messages(chat_id)
+        if chat_history and chat_history[-1]["is_user"]:
+            # Tambahkan placeholder dari assistant jika ada pesan user berturut-turut
+            placeholder_response = "I'm processing your previous message."
+            chat.add_message(chat_id, placeholder_response, is_user=False)
+
+        # Pencarian di knowledge base
         kb_results = kb.search_items(message)
         if kb_results:
             kb_response = kb_results[0]
@@ -65,22 +74,23 @@ async def process_chat_message(
             if kb_response.get("image_path"):
                 response += f"\n {kb_response['image_path']}"
 
-            kb.add_message(chat_id, response, is_user=False)
+            chat.add_message(chat_id, response, is_user=False)
             yield response
             return
 
+        chat.add_message(chat_id, message, is_user=True)
+
+        # Jika ada file, baca kontennya
+        file_id = None
         file_content = None
+
         if file_path:
-            logger.info(f"Processing file: {file_path}")
             file_name = os.path.basename(file_path)
             file_size = os.path.getsize(file_path)
             file_info = f"File attached: {file_name} (size: {file_size} bytes)"
-            kb.add_file_to_chat(chat_id, file_name, file_path)
-            file_content = await read_file_content(file_path)
+            file_id = chat.add_file_to_chat(chat_id, file_name, file_path)
+            chat.add_message(chat_id, file_info, is_user=True, file_id=file_id)
 
-            logger.info(
-                f"Starting chat with retry stream for user {user_id}, chat {chat_id}"
-            )
         bot_response = ""
         async for chunk in chat_with_retry_stream(
             user_id, chat_id, message, file_content
@@ -88,13 +98,9 @@ async def process_chat_message(
             bot_response += chunk
             yield chunk
 
+        # Tambahkan pesan user dan respons dari bot ke riwayat chat
         if bot_response:
-            logger.info(f"Adding user message to chat {chat_id}")
-            kb.add_message(chat_id, message, is_user=True)
-            if file_content:
-                kb.add_message(chat_id, file_info, is_user=True)
-            logger.info(f"Adding bot response to chat {chat_id}")
-            kb.add_message(chat_id, bot_response, is_user=False)
+            chat.add_message(chat_id, bot_response, is_user=False)
 
     except ValueError as ve:
         logger.error(f"ValueError in process_chat: {str(ve)}")
@@ -139,7 +145,7 @@ def get_chat_history(chat_id: int):
     Returns:
         List[Dict[str, any]]: Daftar pesan dalam chat, termasuk informasi file jika ada.
     """
-    history = kb.get_chat_history(chat_id)
+    history = chat.get_chat_history(chat_id)
     for message in history:
         if message.get("file_path"):
             message["file_url"] = f"/uploads/{os.path.basename(message['file_path'])}"
@@ -177,7 +183,7 @@ async def chat_with_retry_stream(
         try:
             logger.info(f"Attempt {attempt + 1} for user {user_id}, chat {chat_id}")
 
-            chat_history = kb.get_chat_messages(chat_id)
+            chat_history = chat.get_chat_messages(chat_id)
             logger.info(f"Retrieved {len(chat_history)} messages from chat history")
 
             knowledge_base_items = kb.get_all_items()
@@ -208,16 +214,27 @@ async def chat_with_retry_stream(
             last_role = None
             for msg in chat_history:
                 role = "user" if msg["is_user"] else "assistant"
-                if role == last_role == "user":
-                    # Jika ada dua pesan user berturut-turut, tambahkan pesan kosong dari assistant
-                    messages.append(
-                        {
-                            "role": "assistant",
-                            "content": "I'm processing your previous message.",
-                        }
+                if role == last_role:
+                    # Jika peran sama dengan sebelumnya, tambahkan pesan dummy dari peran lainnya
+                    dummy_role = "assistant" if role == "user" else "user"
+                    dummy_content = (
+                        "I understand."
+                        if dummy_role == "assistant"
+                        else "Please continue."
                     )
+                    messages.append({"role": dummy_role, "content": dummy_content})
                 messages.append({"role": role, "content": msg["content"]})
                 last_role = role
+
+            # Pastikan pesan terakhir adalah dari assistant sebelum menambahkan pesan user baru
+            if last_role == "user" or last_role is None:
+                messages.append(
+                    {
+                        "role": "assistant",
+                        "content": "I understand. How can I help you?",
+                    }
+                )
+
             user_message_content = [{"type": "text", "text": message}]
             if file_content:
                 user_message_content.append(file_content)
@@ -273,17 +290,17 @@ def get_all_chats():
     Returns:
         List[Dict]: Daftar semua chat dengan informasi id, title, dan created_at.
     """
-    return kb.get_all_chats()
+    return chat.get_all_chats()
 
 
 def get_user_chats(user_id: str):
-    return kb.get_user_chats(user_id)
+    return chat.get_user_chats(user_id)
 
 
 def get_chat_messages(chat_id: int) -> List[Dict[str, Any]]:
     logging.info(f"Fetching messages for chat_id: {chat_id}")
     try:
-        messages = kb.get_chat_messages(chat_id)
+        messages = chat.get_chat_messages(chat_id)
         logging.info(f"Retrieved {len(messages)} messages for chat_id {chat_id}")
         return messages
     except Exception as e:
@@ -294,18 +311,18 @@ def get_chat_messages(chat_id: int) -> List[Dict[str, Any]]:
 
 
 def create_new_chat(user_id: str):
-    return kb.create_new_chat(user_id)
+    return chat.create_new_chat(user_id)
 
 
 def delte_chat(user_id: str):
-    return kb.delte_chat(user_id)
+    return chat.delte_chat(user_id)
 
 
 def is_first_message(chat_id: int) -> bool:
     """
     Memeriksa apakah ini adalah pesan pertama dalam chat.
     """
-    messages = kb.get_chat_messages(chat_id)
+    messages = chat.get_chat_messages(chat_id)
     return len(messages) == 0
 
 
@@ -317,4 +334,4 @@ def update_chat_title(chat_id: int, title: str):
         chat_id (int): ID chat yang akan diupdate.
         title (str): Judul baru untuk chat.
     """
-    return kb.update_chat_title(chat_id, title)
+    return chat.update_chat_title(chat_id, title)

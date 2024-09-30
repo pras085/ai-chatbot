@@ -1,4 +1,5 @@
 import React from "react";
+import { isAllowedFileType, allowedExtensions } from "../utils/helpers";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB in bytes
 const MAX_FILE_COUNT = 5; // Maksimal 5 file
@@ -24,10 +25,12 @@ function FileUpload({ onFileUpload, currentFiles }) {
       return;
     }
     const validFiles = newFiles.filter((file) => {
-      // if (!isAllowedFileType(file)) {
-      //   alert(`File type not allowed: ${file.name}`);
-      //   return false;
-      // }
+      const fileExt = file.name.split(".").pop().toLowerCase();
+
+      if (!isAllowedFileType(file)) {
+        alert(`File type .${fileExt} not allowed`);
+        return false;
+      }
       if (file.size > MAX_FILE_SIZE) {
         alert(
           `File too large: ${file.name}. Maximum size is ${
@@ -45,16 +48,6 @@ function FileUpload({ onFileUpload, currentFiles }) {
     e.target.value = "";
   };
 
-  const isAllowedFileType = (file) => {
-    const allowedTypes = [
-      "image/jpeg",
-      "image/png",
-      "application/pdf",
-      "text/plain",
-    ];
-    return allowedTypes.includes(file.type);
-  };
-
   return (
     <input
       type="file"
@@ -62,6 +55,7 @@ function FileUpload({ onFileUpload, currentFiles }) {
       style={{ display: "none" }}
       onChange={handleFileChange}
       multiple
+      accept={allowedExtensions.toString()}
     />
   );
 }

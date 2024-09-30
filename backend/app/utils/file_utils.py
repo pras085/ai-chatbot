@@ -1,5 +1,6 @@
 import os
 from fastapi import UploadFile
+import logging
 
 ALLOWED_EXTENSIONS = {"txt", "pdf", "png", "jpg", "jpeg"}
 UPLOAD_FOLDER = os.getenv("UPLOAD_FOLDER")
@@ -40,4 +41,5 @@ async def save_uploaded_file(file: UploadFile) -> str:
     file_path = os.path.join(UPLOAD_FOLDER, file.filename)
     with open(file_path, "wb") as buffer:
         buffer.write(await file.read())
+    logging.info(f"File saved to: {file_path}")
     return file_path

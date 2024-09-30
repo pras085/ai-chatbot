@@ -8,13 +8,15 @@ from dotenv import load_dotenv
 from typing import List, Dict
 from datetime import datetime
 from fastapi.encoders import jsonable_encoder
-from knowledge_base import KnowledgeBase
+from app.database import KnowledgeBase, ChatManager
 from config import Config
 
 
 load_dotenv()
 
 router = APIRouter()
+
+chat = ChatManager()
 kb = KnowledgeBase()
 
 UPLOAD_DIRECTORY = os.getenv("UPLOAD_FOLDER")
@@ -37,17 +39,6 @@ async def send_chat_message(
     user_id: str = DEFAULT_USER,
     chat_id: int = Form(...),
 ):
-    """
-    Endpoint untuk mengirim pesan chat dan file opsional.
-
-    Args:
-        message (str): Pesan dari pengguna.
-        file (UploadFile, optional): File yang diunggah oleh pengguna.
-        user_id (str): ID pengguna (default: DEFAULT_USER).
-
-    Returns:
-        StreamingResponse: Stream respons dari model AI.
-    """
     try:
         file_path = None
         if file:
@@ -79,15 +70,19 @@ async def get_chat_messages(chat_id: int):
     try:
         logging.info(f"Attempting to fetch messages for chat_id: {chat_id}")
         messages = chat_service.get_chat_messages(chat_id)
-        logging.info(f"Retrieved messages: {messages}")
+        # logging.info(f"Retrieved messages: {messages}")
 
-        messages = chat_service.get_chat_messages(chat_id)
         if not messages:
             logging.info(f"No messages found for chat_id: {chat_id}")
             return JSONResponse(
                 status_code=status.HTTP_200_OK,
                 content={"messages": [], "chat_id": chat_id},
             )
+        for message in messages:
+            if message.get("file_path"):
+                message["file_url"] = (
+                    f"/uploads/{os.path.basename(message['file_path'])}"
+                )
         json_compatible_messages = jsonable_encoder(messages)
         logging.info(f"Returning {len(json_compatible_messages)} messages")
         return JSONResponse(
@@ -114,9 +109,14 @@ async def get_uploaded_file(filename: str):
         FileResponse: File yang diminta.
     """
     file_path = os.path.join(UPLOAD_DIRECTORY, filename)
+    logging.info(f"Attempting to access file: {file_path}")
     if not os.path.exists(file_path):
+        logging.error(f"File not found: {file_path}")
         raise HTTPException(status_code=404, detail="File tidak ditemukan")
-    return FileResponse(file_path)
+    logging.info(f"File found, returning: {file_path}")
+    return FileResponse(
+        file_path, media_type="application/octet-stream", filename=filename
+    )
 
 
 @router.post("/files/upload")

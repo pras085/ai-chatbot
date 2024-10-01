@@ -8,6 +8,7 @@ from app.database import KnowledgeBase, ChatManager
 
 import json
 import base64
+from ..utils.feature_utils import Feature
 
 
 logging.basicConfig(level=logging.INFO)
@@ -29,8 +30,32 @@ except Exception as e:
     kb = None
 
 
+def get_system_prompt(feature: Feature) -> str:
+    """
+    Mengembalikan system prompt yang sesuai berdasarkan fitur yang dipilih.
+    """
+    base_prompt = "Anda adalah asisten AI untuk muatmuat.com. "
+
+    prompts = {
+        Feature.GENERAL: base_prompt
+        + "Anda mampu menjawab berbagai topik termasuk coding.",
+        Feature.CODE_CHECK: base_prompt
+        + "Anda akan menilai kesesuaian code dengan standar perusahaan. Standar code perusahaan meliputi: [masukkan standar code perusahaan Anda di sini]",
+        Feature.CODE_HELPER: base_prompt
+        + "Anda akan membantu menambahkan dokumentasi dan komentar pada code project.",
+        Feature.CS_CHATBOT: base_prompt
+        + "Anda akan menjawab pertanyaan terkait produk perusahaan berdasarkan informasi dari FAQ.",
+    }
+
+    return prompts.get(feature, prompts[Feature.GENERAL])
+
+
 async def process_chat_message(
-    user_id: str, chat_id: int, message: str, file_path: str = None
+    user_id: str,
+    chat_id: int,
+    message: str,
+    file_path: str = None,
+    feature: Feature = Feature.GENERAL,
 ):
     """
     Memproses pesan chat dari pengguna dan menghasilkan respons.
@@ -40,7 +65,9 @@ async def process_chat_message(
         chat_id (int): ID chat tempat pesan dikirim.
         message (str): Isi pesan dari pengguna.
     """
-    logger.info(f"Processing message for user {user_id}, chat {chat_id}")
+    logger.info(
+        f"Processing message for user {user_id}, chat {chat_id}, feature {feature.name}"
+    )
     try:
         if not message and not file_path:
             raise ValueError(

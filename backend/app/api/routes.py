@@ -10,7 +10,7 @@ from datetime import datetime
 from fastapi.encoders import jsonable_encoder
 from app.database import KnowledgeBase, ChatManager
 from config import Config
-
+from ..utils.feature_utils import Feature
 
 load_dotenv()
 

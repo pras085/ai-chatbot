@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, status, File, Form, UploadFile
+from fastapi import APIRouter, HTTPException, status, File, Form, UploadFile, Depends
 from fastapi.responses import StreamingResponse, FileResponse, JSONResponse
 from app.services import chat_service
 import logging
@@ -8,13 +8,17 @@ from dotenv import load_dotenv
 from typing import List, Dict
 from datetime import datetime
 from fastapi.encoders import jsonable_encoder
-from app.database import KnowledgeBase, ChatManager
+from app.database import KnowledgeBase, ChatManager, get_db
 from config import Config
-from ..utils.feature_utils import Feature
+from fastapi.security import OAuth2PasswordRequestForm
+from .auth import create_access_token, verify_token, verify_password, get_password_hash
+from sqlalchemy.orm import Session
+from .. import schemas
+from app.models.models import User
 
 load_dotenv()
 
-router = APIRouter()
+api = APIRouter()
 
 chat = ChatManager()
 kb = KnowledgeBase()
@@ -32,7 +36,47 @@ def safe_get(dict_obj, key, default=""):
     return str(value)
 
 
-@router.post("/chat/send")
+@api.post("/login")
+async def login(
+    form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)
+):
+    user = chat.get_user(db, form_data.username)
+    if not user or not verify_password(
+        form_data.password,
+        user.hashed_password,
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    access_token = create_access_token(data={"sub": user.username})
+    return {"access_token": access_token, "token_type": "bearer"}
+
+
+@api.post("/logout")
+async def logout(current_user: str = Depends(verify_token)):
+    return {"message": "Successfully logged out"}
+
+
+@api.get("/protected")
+async def protected_route(current_user: str = Depends(verify_token)):
+    return {"message": f"Hello, {current_user}!"}
+
+
+@api.post("/register", response_model=schemas.User)
+async def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
+    password = None
+    db_user = chat.get_user(db, username=user.username)
+    if db_user:
+        raise HTTPException(status_code=400, detail="Username already registered")
+    password = user.password
+    hashed_password = get_password_hash(password)
+    logging.info(f"Created user: {user.username} pass: {hashed_password}")
+    return chat.create_user(db, user.username, hashed_password)
+
+
+@api.post("/chat/send")
 async def send_chat_message(
     message: str = Form(...),
     file: UploadFile = File(None),
@@ -55,7 +99,19 @@ async def send_chat_message(
         )
 
 
-@router.get("/chat/{chat_id}/messages")
+@api.get("/user")
+async def get_current_user(
+    current_user: str = Depends(verify_token),
+    db: Session = Depends(get_db),
+):
+    # Ambil data user dari database berdasarkan username (current_user)
+    user = chat.get_user(db, username=current_user)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return {"id": user.id, "username": user.username}
+
+
+@api.get("/chat/{chat_id}/messages")
 async def get_chat_messages(chat_id: int):
     """
     Endpoint untuk mengambil pesan-pesan dari chat tertentu.
@@ -97,7 +153,7 @@ async def get_chat_messages(chat_id: int):
         )
 
 
-@router.get("/uploads/{filename}")
+@api.get("/uploads/{filename}")
 async def get_uploaded_file(filename: str):
     """
     Endpoint untuk mengambil file yang telah diunggah.
@@ -119,7 +175,7 @@ async def get_uploaded_file(filename: str):
     )
 
 
-@router.post("/files/upload")
+@api.post("/files/upload")
 async def upload_file(file: UploadFile = File(...)):
     """
     Endpoint untuk mengunggah file.
@@ -140,8 +196,8 @@ async def upload_file(file: UploadFile = File(...)):
         )
 
 
-@router.get("/user/{user_id}/chats")
-async def get_user_chats(user_id: str = DEFAULT_USER) -> List[Dict[str, str]]:
+@api.get("/user/{user_id}/chats")
+async def get_user_chats(user_id: int, db: Session = Depends(get_db)):
     """
     Endpoint untuk mengambil semua chat untuk pengguna tertentu.
 
@@ -149,28 +205,27 @@ async def get_user_chats(user_id: str = DEFAULT_USER) -> List[Dict[str, str]]:
         user_id (str): ID pengguna (default: DEFAULT_USER).
 
     Returns:
-        List[Dict]: Daftar semua chat dengan informasi id, title, dan created_at.
+        List[Dict]: Daftar semua chat dengan informasi id, title, dan created_at, userid
     """
     try:
         chats = chat_service.get_user_chats(user_id)
-
-        response = [
+        return [
             {
-                "chat_id": safe_get(chat, "id"),
-                "title": safe_get(chat, "title"),
-                "created_at": safe_get(chat, "created_at"),
-                "user_id": safe_get(chat, "user_id"),
+                "chat_id": chat.id,
+                "title": chat.title,
+                "created_at": chat.created_at,
+                "user_id": chat.user_id,
             }
             for chat in chats
         ]
-        return response
+
     except Exception as e:
         logging.error(f"Error in get_user_chats endpoint: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 
-@router.post("/user/{user_id}/chats")
-async def create_new_chat(user_id: str = DEFAULT_USER):
+@api.post("/user/{user_id}/chats")
+async def create_new_chat(user_id: int, db: Session = Depends(get_db)):
     """
     Endpoint untuk membuat chat baru untuk pengguna tertentu.
 
@@ -181,7 +236,7 @@ async def create_new_chat(user_id: str = DEFAULT_USER):
         Dict: Informasi tentang chat baru yang dibuat.
     """
     try:
-        new_chat = chat_service.create_new_chat(user_id)
+        new_chat = chat_service.create_new_chat(user_id=user_id)
         return {
             "id": new_chat["id"],
             "user_id": new_chat["user_id"],
@@ -193,7 +248,7 @@ async def create_new_chat(user_id: str = DEFAULT_USER):
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 
-@router.delete("/user/{user_id}/chats")
+@api.delete("/user/{user_id}/chats")
 async def delete_new_chat(user_id: str = DEFAULT_USER):
     """
     Endpoint untuk membuat chat baru untuk pengguna tertentu.
@@ -213,11 +268,11 @@ async def delete_new_chat(user_id: str = DEFAULT_USER):
             "created_at": datetime.now().isoformat(),
         }
     except Exception as e:
-        logging.error(f"Error in create_new_chat endpoint: {str(e)}")
+        logging.error(f"Error in delete_new_chat endpoint: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 
-@router.post("/knowledge_base/add")
+@api.post("/knowledge_base/add")
 async def add_knowledge_base_item(
     question: str = Form(...), answer: str = Form(...), image: UploadFile = File(None)
 ):
@@ -229,7 +284,7 @@ async def add_knowledge_base_item(
         raise
 
 
-@router.get("/uploads/knowledge_base_images/{filename}")
+@api.get("/uploads/knowledge_base_images/{filename}")
 async def get_knowledge_base_image(filename: str):
     file_path = os.path.join(Config.IMAGE_UPLOAD_FOLDER, filename)
     if not os.path.exists(file_path):

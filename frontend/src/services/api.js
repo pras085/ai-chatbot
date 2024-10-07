@@ -70,7 +70,7 @@ export const getChatMessages = async (chatId) => {
  */
 export const getUserChats = async (userId) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/user/${userId}/chats`);
+    const response = await apiRequest(`/user/${userId}/chats`);
     if (!response.ok) throw new Error("Failed to fetch user chats");
     return await response.json();
   } catch (error) {
@@ -87,7 +87,7 @@ export const getUserChats = async (userId) => {
  */
 export const createNewChat = async (userId) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/user/${userId}/chats`, {
+    const response = await apiRequest(`/user/${userId}/chats`, {
       method: "POST",
     });
     if (!response.ok) {
@@ -140,4 +140,30 @@ export const deleteChat = async (userId) => {
     console.error("Error delete new chat:", error);
     throw error;
   }
+};
+
+export const apiRequest = async (endpoint, options = {}) => {
+  const token = localStorage.getItem("token");
+  if (!token) {
+    throw new Error("No authentication token found");
+  }
+
+  const headers = {
+    ...options.headers,
+    Authorization: `Bearer ${token}`,
+  };
+
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    ...options,
+    headers,
+  });
+
+  if (response.status === 401) {
+    // Token tidak valid atau kadaluarsa
+    localStorage.removeItem("token");
+    window.location.href = "/login";
+    throw new Error("Authentication failed");
+  }
+
+  return response;
 };

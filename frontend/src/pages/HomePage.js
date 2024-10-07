@@ -6,11 +6,13 @@ import {
   faCode,
   faCheck,
   faHeadset,
+  faSignOutAlt,
 } from "@fortawesome/free-solid-svg-icons";
 import "../styles/HomePage.css"; // Pastikan file CSS ini ada
 import { ReactComponent as MuatmuatIcon } from "../assets/logo-muatmuat.svg";
+import { apiRequest } from "../services/api";
 
-const HomePage = () => {
+const HomePage = ({ userId }) => {
   const navigate = useNavigate();
 
   const features = [
@@ -40,9 +42,27 @@ const HomePage = () => {
     },
   ];
 
+  const handleLogout = async () => {
+    try {
+      await apiRequest("/logout", { method: "POST" });
+      localStorage.removeItem("token");
+      navigate("/login");
+    } catch (error) {
+      console.error("Logout failed:", error);
+      // Tetap hapus token dan arahkan ke login meskipun terjadi error
+      localStorage.removeItem("token");
+      navigate("/login");
+    }
+  };
+
   return (
     <div className="home-container">
-      <MuatmuatIcon className="home-title" />
+      <div className="header">
+        <MuatmuatIcon className="home-title" />
+        <button onClick={handleLogout} className="logout-button">
+          <FontAwesomeIcon icon={faSignOutAlt} /> Logout
+        </button>
+      </div>
       <div className="feature-grid">
         {features.map((feature, index) => (
           <div key={index} className="feature-card">

@@ -1,5 +1,4 @@
 import os
-import psycopg2
 
 
 class Config:
@@ -22,12 +21,8 @@ class Config:
     # Nama model terbaru yang digunakan
     MODEL_NAME = "claude-3-5-sonnet-20240620"
 
+    SECRET_KEY = os.getenv("SECRET_KEY")
 
-def get_db_connection():
-    return psycopg2.connect(
-        dbname=os.getenv("DB_NAME", "muatmuat_db"),
-        user=os.getenv("DB_USER", ""),
-        password=os.getenv("DB_PASSWORD", ""),
-        host=os.getenv("DB_HOST", "localhost"),
-        port=os.getenv("DB_PORT", "5432"),
-    )
+    ALGORITHM = os.getenv("ALGORITHM")
+
+    ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 30))

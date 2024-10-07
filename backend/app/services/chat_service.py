@@ -4,11 +4,11 @@ from config import Config
 import asyncio
 import logging
 from typing import List, Dict, Any
-from app.database import KnowledgeBase, ChatManager
-
 import json
 import base64
 from ..utils.feature_utils import Feature
+from app.database import ChatManager, KnowledgeBase
+from app.database.database import SessionLocal
 
 
 logging.basicConfig(level=logging.INFO)
@@ -327,6 +327,7 @@ def get_user_chats(user_id: str):
 def get_chat_messages(chat_id: int) -> List[Dict[str, Any]]:
     logging.info(f"Fetching messages for chat_id: {chat_id}")
     try:
+        db = SessionLocal()
         messages = chat.get_chat_messages(chat_id)
         logging.info(f"Retrieved {len(messages)} messages for chat_id {chat_id}")
         return messages
@@ -335,10 +336,12 @@ def get_chat_messages(chat_id: int) -> List[Dict[str, Any]]:
             f"Error fetching messages for chat_id {chat_id}: {str(e)}", exc_info=True
         )
         raise
+    finally:
+        db.close()
 
 
 def create_new_chat(user_id: str):
-    return chat.create_new_chat(user_id)
+    return chat.create_chat(user_id=user_id)
 
 
 def delte_chat(user_id: str):

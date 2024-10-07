@@ -1,8 +1,9 @@
 import os
-from psycopg2.extras import DictCursor
-from typing import Dict, List, Any
 import logging
-import psycopg2
+from typing import Dict, List, Any
+from sqlalchemy.orm import Session
+from sqlalchemy import desc
+from app.models.models import User, Chat, Message, ChatFile
 
 logger = logging.getLogger(__name__)
 
@@ -10,229 +11,209 @@ logger = logging.getLogger(__name__)
 class ChatManager:
     def __init__(self):
         """
-        Inisialisasi ChatManager dengan parameter koneksi database.
+        Inisialisasi ChatManager.
         """
-        self.conn_params = {
-            "dbname": os.getenv("DB_NAME", "muatmuat_db"),
-            "user": os.getenv("DB_USER", ""),
-            "password": os.getenv("DB_PASSWORD", ""),
-            "host": os.getenv("DB_HOST", "localhost"),
-            "port": os.getenv("DB_PORT", "5432"),
-        }
-        self._create_table()
+        pass
 
-    def get_connection(self):
-        return psycopg2.connect(**self.conn_params)
+    def get_user(self, db: Session, username: str) -> User:
+        """
+        Mengambil data pengguna berdasarkan username.
 
-    def _create_table(self):
-        with self.get_connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute("""
-                    CREATE TABLE IF NOT EXISTS knowledge_base (
-                        id SERIAL PRIMARY KEY,
-                        question TEXT NOT NULL,
-                        answer TEXT NOT NULL,
-                        image_path TEXT
-                    )
-                """)
-                cur.execute("""
-                    CREATE TABLE IF NOT EXISTS chats (
-                        id SERIAL PRIMARY KEY,
-                        user_id TEXT NOT NULL,
-                        title TEXT,
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                    )
-                """)
-                cur.execute("""
-                    CREATE TABLE IF NOT EXISTS messages (
-                        id SERIAL PRIMARY KEY,
-                        chat_id INTEGER REFERENCES chats(id),
-                        content TEXT NOT NULL,
-                        is_user BOOLEAN NOT NULL,
-                        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                    )
-                """)
-                cur.execute("""
-                    CREATE TABLE IF NOT EXISTS chat_files (
-                        id SERIAL PRIMARY KEY,
-                        chat_id INTEGER REFERENCES chats(id),
-                        file_name TEXT NOT NULL,
-                        file_path TEXT NOT NULL,
-                        uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                    )
-                """)
-            conn.commit()
+        Args:
+            db (Session): Sesi database SQLAlchemy.
+            username (str): Username pengguna yang dicari.
 
-    def create_chat(self, user_id: str) -> int:
+        Returns:
+            User: Objek User jika ditemukan, None jika tidak ditemukan.
+        """
+        user = db.query(User).filter(User.username == username).first()
+        logging.info(f"Querying user: {username}, Result: {user}")
+        return user
+
+    def create_user(self, db: Session, username: str, hashed_password: str) -> User:
+        """
+        Membuat pengguna baru.
+
+        Args:
+            db (Session): Sesi database SQLAlchemy.
+            username (str): Username untuk pengguna baru.
+            hashed_password (str): Password yang sudah di-hash.
+
+        Returns:
+            User: Objek User yang baru dibuat.
+        """
+        db_user = User(username=username, hashed_password=hashed_password)
+        db.add(db_user)
+        db.commit()
+        db.refresh(db_user)
+        logging.info(f"Created user: {username}")
+        return db_user
+
+    def create_chat(self, db: Session, user_id: int, title: str = "New Chat") -> int:
         """
         Membuat chat baru untuk pengguna tertentu.
 
         Args:
-            user_id (str): ID pengguna yang membuat chat.
+            db (Session): Sesi database SQLAlchemy.
+            user_id (int): ID pengguna yang membuat chat.
+            title (str): Judul chat (default: "New Chat").
 
         Returns:
             int: ID chat yang baru dibuat.
         """
-        with self.get_connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    "INSERT INTO chats (user_id) VALUES (%s) RETURNING id", (user_id,)
-                )
-                chat_id = cur.fetchone()[0]
-            conn.commit()
-        return chat_id
+        db_chat = Chat(user_id=user_id, title=title)
+        db.add(db_chat)
+        db.commit()
+        db.refresh(db_chat)
+        return db_chat.id
 
     def add_message(
-        self, chat_id: int, content: str, is_user: bool, file_id: int = None
-    ):
+        self,
+        db: Session,
+        chat_id: int,
+        content: str,
+        is_user: bool,
+        file_id: int = None,
+    ) -> Message:
         """
         Menambahkan pesan baru ke dalam chat.
 
         Args:
+            db (Session): Sesi database SQLAlchemy.
             chat_id (int): ID chat tempat pesan akan ditambahkan.
             content (str): Isi pesan.
             is_user (bool): True jika pesan dari pengguna, False jika dari sistem.
             file_id (int, optional): ID file yang terkait dengan pesan.
 
         Returns:
-            None
+            Message: Objek Message yang baru ditambahkan.
         """
+        db_message = Message(
+            chat_id=chat_id, content=content, is_user=is_user, file_id=file_id
+        )
+        db.add(db_message)
+        db.commit()
+        db.refresh(db_message)
+        return db_message
 
-        try:
-            with self.get_connection() as conn:
-                with conn.cursor() as cur:
-                    if file_id is not None:
-                        cur.execute(
-                            "INSERT INTO messages (chat_id, content, is_user, file_id) VALUES (%s, %s, %s, %s)",
-                            (chat_id, content, is_user, file_id),
-                        )
-                    else:
-                        cur.execute(
-                            "INSERT INTO messages (chat_id, content, is_user) VALUES (%s, %s, %s)",
-                            (chat_id, content, is_user),
-                        )
-                conn.commit()
-            logger.info(f"Added message to chat {chat_id}")
-        except Exception as e:
-            logger.error(f"Error adding message to chat: {str(e)}", exc_info=True)
-            raise
-
-    def get_chat_messages(self, chat_id: int) -> List[Dict[str, Any]]:
+    def get_chat_messages(self, db: Session, chat_id: int) -> List[Dict[str, Any]]:
         """
         Mengambil semua pesan untuk chat tertentu.
 
         Args:
+            db (Session): Sesi database SQLAlchemy.
             chat_id (int): ID chat yang pesannya akan diambil.
 
         Returns:
             List[Dict[str, Any]]: Daftar pesan dalam format dictionary.
         """
-
         try:
-            with self.get_connection() as conn:
-                with conn.cursor(cursor_factory=DictCursor) as cur:
-                    cur.execute(
-                        """
-                        SELECT m.*, cf.file_name, cf.file_path 
-                        FROM messages m
-                        LEFT JOIN chat_files cf ON m.file_id = cf.id
-                        WHERE m.chat_id = %s 
-                        ORDER BY m.timestamp ASC
-                        """,
-                        (chat_id,),
-                    )
-                    messages = cur.fetchall()
-                    result = []
-                    for message in messages:
-                        msg_dict = dict(message)
-                        if msg_dict["file_name"] and msg_dict["file_path"]:
-                            msg_dict["file_url"] = (
-                                f"/uploads/{os.path.basename(msg_dict['file_path'])}"
-                            )
-                        result.append(msg_dict)
-                    logger.info(f"Retrieved {len(result)} messages for chat {chat_id}")
-                    return result
+            messages = (
+                db.query(Message)
+                .filter(Message.chat_id == chat_id)
+                .order_by(Message.timestamp.asc())
+                .all()
+            )
+
+            result = []
+            for message in messages:
+                msg_dict = {
+                    "id": message.id,
+                    "content": message.content,
+                    "is_user": message.is_user,
+                    "timestamp": message.timestamp.isoformat(),
+                }
+                # Tambahkan logika untuk file jika diperlukan
+                result.append(msg_dict)
+
+            logger.info(f"Retrieved {len(result)} messages for chat {chat_id}")
+            return result
         except Exception as e:
             logger.error(f"Error retrieving chat messages: {str(e)}", exc_info=True)
             return []
 
-    def get_user_chats(self, user_id: str):
+    def get_user_chats(self, db: Session, user_id: int) -> List[Chat]:
         """
         Mengambil semua chat untuk pengguna tertentu.
 
         Args:
-            user_id (str): ID pengguna.
+            db (Session): Sesi database SQLAlchemy.
+            user_id (int): ID pengguna.
 
         Returns:
-            List[Dict]: Daftar chat milik pengguna.
+            List[Chat]: Daftar objek Chat milik pengguna.
         """
-        with self.get_connection() as conn:
-            with conn.cursor(cursor_factory=DictCursor) as cur:
-                cur.execute(
-                    "SELECT * FROM chats WHERE user_id = %s ORDER BY created_at DESC",
-                    (user_id,),
-                )
-                return cur.fetchall()
+        return (
+            db.query(Chat)
+            .filter(Chat.user_id == user_id)
+            .order_by(desc(Chat.created_at))
+            .all()
+        )
 
-    def delete_new_chat(self, user_id: str):
-        with self.get_connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    "DELETE FROM chats (user_id) VALUES (%s) RETURNING id", (user_id,)
-                )
-                chat_id = cur.fetchone()[0]
-            conn.commit()
-        return {"id": chat_id, "user_id": user_id}
-
-    def create_new_chat(self, user_id: str):
+    def delete_chat(self, db: Session, chat_id: int) -> bool:
         """
-        Membuat chat baru untuk pengguna tertentu.
+        Menghapus chat berdasarkan ID.
 
         Args:
-            user_id (str): ID pengguna yang membuat chat.
+            db (Session): Sesi database SQLAlchemy.
+            chat_id (int): ID chat yang akan dihapus.
 
         Returns:
-            Dict: Informasi tentang chat baru yang dibuat.
+            bool: True jika berhasil dihapus, False jika tidak.
         """
-        with self.get_connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    "INSERT INTO chats (user_id) VALUES (%s) RETURNING id", (user_id,)
-                )
-                chat_id = cur.fetchone()[0]
-            conn.commit()
-        return {"id": chat_id, "user_id": user_id}
+        chat = db.query(Chat).filter(Chat.id == chat_id).first()
+        if chat:
+            db.delete(chat)
+            db.commit()
+            return True
+        return False
 
-    def update_chat_title(self, chat_id: int, title: str):
+    def update_chat_title(self, db: Session, chat_id: int, title: str) -> bool:
         """
         Memperbarui judul chat.
 
         Args:
+            db (Session): Sesi database SQLAlchemy.
             chat_id (int): ID chat yang akan diperbarui.
             title (str): Judul baru untuk chat.
 
         Returns:
-            None
+            bool: True jika berhasil diperbarui, False jika tidak.
         """
-        with self.get_connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    "UPDATE chats SET title = %s WHERE id = %s", (title, chat_id)
-                )
-            conn.commit()
+        chat = db.query(Chat).filter(Chat.id == chat_id).first()
+        if chat:
+            chat.title = title
+            db.commit()
+            return True
+        return False
 
-    def get_latest_chat_id(self, user_id: str) -> int:
-        with self.get_connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute("SELECT MAX(id) FROM chats WHERE user_id = %s", (user_id,))
-                result = cur.fetchone()
-        return result[0] if result else None
+    def get_latest_chat_id(self, db: Session, user_id: int) -> int:
+        """
+        Mendapatkan ID chat terbaru untuk pengguna tertentu.
 
-    def add_file_to_chat(self, chat_id: int, file_name: str, file_path: str) -> int:
+        Args:
+            db (Session): Sesi database SQLAlchemy.
+            user_id (int): ID pengguna.
+
+        Returns:
+            int: ID chat terbaru, atau None jika tidak ada.
+        """
+        latest_chat = (
+            db.query(Chat)
+            .filter(Chat.user_id == user_id)
+            .order_by(desc(Chat.created_at))
+            .first()
+        )
+        return latest_chat.id if latest_chat else None
+
+    def add_file_to_chat(
+        self, db: Session, chat_id: int, file_name: str, file_path: str
+    ) -> int:
         """
         Menambahkan informasi file ke database untuk chat tertentu.
 
         Args:
+            db (Session): Sesi database SQLAlchemy.
             chat_id (int): ID chat tempat file ditambahkan.
             file_name (str): Nama file yang diupload.
             file_path (str): Path tempat file disimpan.
@@ -241,16 +222,14 @@ class ChatManager:
             int: ID dari file yang baru ditambahkan.
         """
         try:
-            with self.get_connection() as conn:
-                with conn.cursor() as cur:
-                    cur.execute(
-                        "INSERT INTO chat_files (chat_id, file_name, file_path) VALUES (%s, %s, %s) RETURNING id",
-                        (chat_id, file_name, file_path),
-                    )
-                    file_id = cur.fetchone()[0]
-                conn.commit()
+            chat_file = ChatFile(
+                chat_id=chat_id, file_name=file_name, file_path=file_path
+            )
+            db.add(chat_file)
+            db.commit()
+            db.refresh(chat_file)
             logger.info(f"File added to chat {chat_id}: {file_name}")
-            return file_id
+            return chat_file.id
         except Exception as e:
             logger.error(f"Error adding file to chat: {str(e)}", exc_info=True)
             raise

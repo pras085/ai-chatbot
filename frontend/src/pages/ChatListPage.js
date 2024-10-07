@@ -2,30 +2,31 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import ChatList from "../components/ChatList";
 import { getUserChats } from "../services/api";
+import { useUser } from "../hooks/useUser";
 
 function ChatListPage({ userId }) {
   const [chats, setChats] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
+  const { user, loading: userLoading } = useUser(); // Menggunakan hook useUser
 
-  const fetchChats = useCallback(async () => {
-    setIsLoading(true);
+  const fetchChats = async (uid) => {
     try {
-      const userChats = await getUserChats(userId);
+      const userChats = await getUserChats(uid);
       setChats(userChats);
-      setError(null);
     } catch (err) {
-      setError("Failed to fetch chats. Please try again later.");
-      console.error(err);
+      console.error("Failed to fetch chats:", err);
     } finally {
       setIsLoading(false);
     }
-  }, [userId]);
+  };
 
   useEffect(() => {
-    fetchChats();
-  }, [fetchChats]);
+    if (userId) {
+      fetchChats(userId);
+    }
+  }, [userId]);
 
   const handleSelectChat = (chatId) => {
     navigate(`/chat/${chatId}`);
@@ -39,7 +40,7 @@ function ChatListPage({ userId }) {
     [navigate]
   );
 
-  if (isLoading) return <div>Loading chats...</div>;
+  if (userLoading || isLoading) return <div>Loading chats...</div>;
   if (error) return <div>{error}</div>;
 
   return (
@@ -48,7 +49,7 @@ function ChatListPage({ userId }) {
         chats={chats}
         onSelectChat={handleSelectChat}
         onNewChat={handleNewChat}
-        userId={userId}
+        userId={user?.id} // Menggunakan id dari user yang diambil dari hook
       />
     </div>
   );

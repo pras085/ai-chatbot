@@ -1,10 +1,13 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api.routes import router
+from app.api.routes import api
 from dotenv import load_dotenv
 from fastapi.staticfiles import StaticFiles
+from app.database import Base, engine
 
 load_dotenv()
+
+Base.metadata.create_all(bind=engine)
 
 # Inisialisasi FastAPI
 app = FastAPI()
@@ -19,7 +22,7 @@ app.add_middleware(
 )
 
 # Tambahkan router untuk endpoint
-app.include_router(router)
+app.include_router(api)
 
 if __name__ == "__main__":
     import uvicorn

@@ -1,6 +1,71 @@
 const API_BASE_URL = "http://localhost:8000"; // Sesuaikan dengan URL backend Anda
 
 /**
+ * Melakukan request API dengan penanganan token otentikasi.
+ *
+ * @param {string} endpoint - Endpoint API yang akan diakses.
+ * @param {Object} options - Opsi untuk request fetch.
+ * @param {string} options.method - Metode HTTP (GET, POST, PUT, DELETE, dll).
+ * @param {Object} [options.headers] - Header tambahan untuk request.
+ * @param {Object|string} [options.body] - Body request untuk metode POST/PUT.
+ * @param {boolean} [options.requiresAuth=true] - Apakah request memerlukan otentikasi.
+ * @returns {Promise<Response>} - Promise yang resolve ke objek Response.
+ * @throws {Error} Jika terjadi kesalahan dalam request atau otentikasi.
+ */
+export const apiRequest = async (endpoint, options = {}) => {
+  const {
+    method = "GET",
+    headers = {},
+    body,
+    requiresAuth = true,
+    ...otherOptions
+  } = options;
+
+  const requestHeaders = new Headers(headers);
+
+  if (requiresAuth) {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      throw new Error("No authentication token found");
+    }
+    requestHeaders.set("Authorization", `Bearer ${token}`);
+  }
+
+  if (!requestHeaders.has("Content-Type") && !(body instanceof FormData)) {
+    requestHeaders.set("Content-Type", "application/json");
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      method,
+      headers: requestHeaders,
+      body: body instanceof FormData ? body : JSON.stringify(body),
+      ...otherOptions,
+    });
+
+    if (response.status === 401 && requiresAuth) {
+      localStorage.removeItem("token");
+      window.location.href = "/login";
+      throw new Error("Authentication failed");
+    }
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    return response;
+  } catch (error) {
+    console.error(`API request failed for endpoint ${endpoint}:`, error);
+    throw error;
+  }
+};
+
+export const getUser = async () => {
+  const response = await apiRequest("/user");
+  return response.json();
+};
+
+/**
  * Mengirim pesan chat baru.
  *
  * @param {string} userId - ID pengguna
@@ -24,18 +89,12 @@ export const sendChatMessage = async (
   if (file) {
     formData.append("file", file);
   }
-
-  const response = await fetch(`${API_BASE_URL}/chat/send`, {
+  const response = await apiRequest(`/chat/send`, {
     method: "POST",
     body: formData,
     signal,
   });
-
-  if (!response.ok) {
-    throw new Error(`HTTP error! status: ${response.status}`);
-  }
-
-  return response;
+  return response.json();
 };
 
 /**
@@ -49,17 +108,10 @@ export const getChatMessages = async (chatId) => {
     console.error("Invalid chat ID");
     return;
   }
-  try {
-    const response = await fetch(`${API_BASE_URL}/chat/${chatId}/messages`);
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    const data = await response.json();
-    console.log("API response for user chats:", data);
-    return data;
-  } catch (error) {
-    console.error("Error fetching messages:", error);
-  }
+  const response = await apiRequest(`/chat/${chatId}/messages`);
+  const data = await response.json();
+  console.log("API response for user chats:", data);
+  return data;
 };
 
 /**
@@ -69,14 +121,8 @@ export const getChatMessages = async (chatId) => {
  * @returns {Promise<Array>} - Array berisi daftar chat pengguna
  */
 export const getUserChats = async (userId) => {
-  try {
-    const response = await apiRequest(`/user/${userId}/chats`);
-    if (!response.ok) throw new Error("Failed to fetch user chats");
-    return await response.json();
-  } catch (error) {
-    console.error("Error fetching user chats:", error);
-    throw error;
-  }
+  const response = await apiRequest(`/user/${userId}/chats`);
+  return response.json();
 };
 
 /**
@@ -86,18 +132,11 @@ export const getUserChats = async (userId) => {
  * @returns {Promise<Object>} - Objek berisi informasi chat baru
  */
 export const createNewChat = async (userId) => {
-  try {
-    const response = await apiRequest(`/user/${userId}/chats`, {
-      method: "POST",
-    });
-    if (!response.ok) {
-      throw new Error("Network response was not ok");
-    }
-    return await response.json();
-  } catch (error) {
-    console.error("Error creating new chat:", error);
-    throw error;
-  }
+  console.log("Creating new chat for user:", userId);
+  const response = await apiRequest(`/user/${userId}/chats`, {
+    method: "POST",
+  });
+  return response.json();
 };
 /**
  * Mengunggah file.
@@ -108,62 +147,23 @@ export const createNewChat = async (userId) => {
 export const uploadFile = async (file) => {
   const formData = new FormData();
   formData.append("file", file);
-
-  const response = await fetch(`${API_BASE_URL}/files/upload`, {
+  const response = await apiRequest("/files/upload", {
     method: "POST",
     body: formData,
   });
-
-  if (!response.ok) {
-    throw new Error(`HTTP error! status: ${response.status}`);
-  }
-
   return response.json();
 };
 
 /**
- * Membuat chat baru untuk pengguna tertentu.
+ * Menghapus chat tertentuu untuk pengguna tertentu.
  *
  * @param {string} userId - ID pengguna
+ * @param {string} chatId - ID chat
  * @returns {Promise<Object>} - Objek berisi informasi chat baru
  */
-export const deleteChat = async (userId) => {
-  try {
-    const response = await fetch(`/api/chats/${userId}`, {
-      method: "DELETE",
-    });
-    if (!response.ok) {
-      throw new Error("Network response was not ok");
-    }
-    return await response.json();
-  } catch (error) {
-    console.error("Error delete new chat:", error);
-    throw error;
-  }
-};
-
-export const apiRequest = async (endpoint, options = {}) => {
-  const token = localStorage.getItem("token");
-  if (!token) {
-    throw new Error("No authentication token found");
-  }
-
-  const headers = {
-    ...options.headers,
-    Authorization: `Bearer ${token}`,
-  };
-
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-    ...options,
-    headers,
+export const deleteChat = async (userId, chatId) => {
+  const response = await apiRequest(`/api/${userId}chats/${chatId}`, {
+    method: "DELETE",
   });
-
-  if (response.status === 401) {
-    // Token tidak valid atau kadaluarsa
-    localStorage.removeItem("token");
-    window.location.href = "/login";
-    throw new Error("Authentication failed");
-  }
-
-  return response;
+  return response.json();
 };

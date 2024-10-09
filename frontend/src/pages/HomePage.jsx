@@ -14,6 +14,9 @@ import { apiRequest } from "../services/api";
 
 const HomePage = ({ userId }) => {
   const navigate = useNavigate();
+  const token = localStorage.getItem("token");
+
+  console.log("token", token);
 
   const features = [
     {

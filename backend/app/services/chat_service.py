@@ -1,20 +1,34 @@
+"""
+chat_service.py
+
+Modul ini menyediakan layanan tingkat tinggi untuk operasi terkait chat dalam aplikasi.
+Ini bertindak sebagai perantara antara routes dan database manager, menangani logika bisnis
+dan penanganan error.
+
+Modul ini menggunakan ChatManager dan KnowledgeBase untuk operasi database,
+serta berbagai utilitas untuk autentikasi dan penanganan file.
+
+Fungsi-fungsi dalam modul ini sebagian besar bersifat asynchronous untuk mendukung
+operasi non-blocking.
+"""
+
+from sqlalchemy.orm import Session
+from app.database import ChatManager, KnowledgeBase
+from app.models import models
+from app import schemas
+from typing import List, Optional
+from fastapi import UploadFile, HTTPException
+import logging
+from app.utils.file_utils import save_uploaded_file
+from app.api.auth import verify_password, get_password_hash
 import os
 from anthropic import AsyncAnthropic
 from config import Config
 import asyncio
-import logging
+from app.utils.feature_utils import Feature
 from typing import List, Dict, Any
-import json
-import base64
-from ..utils.feature_utils import Feature
-from app.database import ChatManager, KnowledgeBase
-from app.database.database import SessionLocal
 
-
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-chat = ChatManager()
 
 CLAUDE_API_KEY = Config.CLAUDE_API_KEY
 if not CLAUDE_API_KEY:
@@ -22,17 +36,149 @@ if not CLAUDE_API_KEY:
     raise ValueError("CLAUDE_API_KEY is not set")
 MODEL_NAME = Config.MODEL_NAME
 
-try:
-    kb = KnowledgeBase()
-    logger.info("KnowledgeBase initialized successfully")
-except Exception as e:
-    logger.error(f"Error initializing KnowledgeBase: {str(e)}", exc_info=True)
-    kb = None
+chat_manager = ChatManager()
+kb = KnowledgeBase()
+
+
+async def login(db: Session, username: str, password: str) -> Optional[models.User]:
+    """
+    Mengautentikasi pengguna berdasarkan username dan password.
+
+    Args:
+        db (Session): Sesi database SQLAlchemy.
+        username (str): Username pengguna.
+        password (str): Password pengguna.
+
+    Returns:
+        Optional[models.User]: Objek User jika autentikasi berhasil, None jika gagal.
+
+    Raises:
+        HTTPException: Jika terjadi kesalahan server internal selama autentikasi.
+    """
+    try:
+        user = await get_user_by_username(db, username)
+        if not user or not verify_password(password, user.hashed_password):
+            return None
+        return user
+    except Exception as e:
+        logger.error(f"Error authenticating user: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail="Internal server error during authentication"
+        )
+
+
+async def get_user_by_username(db: Session, username: str) -> Optional[models.User]:
+    """
+    Mengambil data pengguna berdasarkan username.
+
+    Args:
+        db (Session): Sesi database SQLAlchemy.
+        username (str): Username pengguna yang dicari.
+
+    Returns:
+        Optional[models.User]: Objek User jika ditemukan, None jika tidak ditemukan.
+
+    Raises:
+        HTTPException: Jika terjadi kesalahan server internal saat mengambil data pengguna.
+    """
+    try:
+        return chat_manager.get_user(db, username)
+    except Exception as e:
+        logger.error(f"Error getting user by username: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail="Internal server error while fetching user"
+        )
+
+
+async def create_user(db: Session, user: schemas.UserCreate) -> models.User:
+    """
+    Membuat pengguna baru.
+
+    Args:
+        db (Session): Sesi database SQLAlchemy.
+        user (schemas.UserCreate): Data pengguna untuk dibuat.
+
+    Returns:
+        models.User: Objek User yang baru dibuat.
+
+    Raises:
+        HTTPException: Jika terjadi kesalahan server internal saat membuat pengguna.
+    """
+    try:
+        hashed_password = get_password_hash(user.password)
+        return chat_manager.create_user(db, user.username, hashed_password)
+    except Exception as e:
+        logger.error(f"Error creating user: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail="Internal server error while creating user"
+        )
+
+
+async def get_user_chats(db: Session, user_id: int) -> List[Dict[str, Any]]:
+    """
+    Mengambil daftar chat untuk pengguna tertentu.
+
+    Args:
+        db (Session): Sesi database SQLAlchemy.
+        user_id (int): ID pengguna.
+
+    Returns:
+        List[models.Chat]: Daftar objek Chat milik pengguna.
+
+    Raises:
+        HTTPException: Jika terjadi kesalahan server internal saat mengambil daftar chat.
+    """
+    try:
+        chats = chat_manager.get_user_chats(db, user_id)
+        return [
+            {
+                "chat_id": str(chat.id),
+                "title": chat.title,
+                "created_at": chat.created_at.isoformat(),
+                "user_id": str(chat.user_id),
+            }
+            for chat in chats
+        ]
+    except Exception as e:
+        logger.error(f"Error getting user chats: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail="Internal server error while fetching user chats"
+        )
+
+
+async def is_first_message(db: Session, chat_id: str) -> bool:
+    """
+    Memeriksa apakah ini adalah pesan pertama dalam chat.
+
+    Args:
+        db (Session): Sesi database SQLAlchemy.
+        chat_id (int): ID chat yang akan diperiksa.
+
+    Returns:
+        bool: True jika ini adalah pesan pertama, False jika bukan.
+
+    Raises:
+        HTTPException: Jika terjadi kesalahan server internal saat memeriksa pesan.
+    """
+    try:
+        messages = await get_chat_messages(db, chat_id)
+        return len(messages) == 0
+    except Exception as e:
+        logger.error(f"Error checking if first message: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail="Internal server error while checking message"
+        )
 
 
 def get_system_prompt(feature: Feature) -> str:
     """
     Mengembalikan system prompt yang sesuai berdasarkan fitur yang dipilih.
+
+    Args:
+        feature (Feature): Fitur yang dipilih untuk chat.
+
+    Returns:
+        str: System prompt yang sesuai dengan fitur.
     """
     base_prompt = "Anda adalah asisten AI untuk muatmuat.com. "
 
@@ -51,22 +197,31 @@ def get_system_prompt(feature: Feature) -> str:
 
 
 async def process_chat_message(
+    db: Session,
     user_id: str,
-    chat_id: int,
+    chat_id: str,
     message: str,
-    file_path: str = None,
     feature: Feature = Feature.GENERAL,
+    file_path: Optional[str] = None,
 ):
     """
-    Memproses pesan chat dari pengguna dan menghasilkan respons.
+    Memproses pesan chat, termasuk menambahkan pesan ke database dan menghasilkan respons AI.
 
     Args:
-        user_id (str): ID pengguna yang mengirim pesan.
+        db (Session): Sesi database SQLAlchemy.
+        user_id (int): ID pengguna yang mengirim pesan.
         chat_id (int): ID chat tempat pesan dikirim.
-        message (str): Isi pesan dari pengguna.
+        message (str): Isi pesan.
+        file_path (Optional[str]): Path file yang diunggah, jika ada.
+
+    Yields:
+        str: Respons AI atau pesan error.
+
+    Notes:
+        Fungsi ini menggunakan generator untuk streaming respons.
     """
     logger.info(
-        f"Processing message for user {user_id}, chat {chat_id}, feature {feature.name}"
+        f"Processing message for user {user_id}, chat {chat_id}, feature {feature}"
     )
     try:
         if not message and not file_path:
@@ -77,20 +232,20 @@ async def process_chat_message(
         # Buat chat baru jika chat_id tidak ada (percakapan baru)
         if chat_id is None:
             logger.info(f"Creating new chat for user {user_id}")
-            chat_id = kb.create_new_chat(user_id)
+            chat_id = create_new_chat(db, user_id)
 
         # Logika untuk menentukan judul chat berdasarkan pesan pertama
-        if is_first_message(chat_id):
+        if await is_first_message(db, chat_id):
             title = message[:50] + "..." if len(message) > 50 else message
             logger.info(f"First message for chat {chat_id}, updating title")
-            update_chat_title(chat_id, title)
+            await update_chat_title(db, chat_id, title)
 
         # Ambil riwayat pesan dan cek apakah pesan terakhir adalah dari user
-        chat_history = chat.get_chat_messages(chat_id)
+        chat_history = chat_manager.get_chat_messages(db, chat_id)
         if chat_history and chat_history[-1]["is_user"]:
             # Tambahkan placeholder dari assistant jika ada pesan user berturut-turut
             placeholder_response = "I'm processing your previous message."
-            chat.add_message(chat_id, placeholder_response, is_user=False)
+            chat_manager.add_message(db, chat_id, placeholder_response, is_user=False)
 
         # Pencarian di knowledge base
         kb_results = kb.search_items(message)
@@ -101,11 +256,11 @@ async def process_chat_message(
             if kb_response.get("image_path"):
                 response += f"\n {kb_response['image_path']}"
 
-            chat.add_message(chat_id, response, is_user=False)
+            chat_manager.add_message(db, chat_id, response, is_user=False)
             yield response
             return
 
-        chat.add_message(chat_id, message, is_user=True)
+        chat_manager.add_message(db, chat_id, message, is_user=True)
 
         # Jika ada file, baca kontennya
         file_id = None
@@ -115,19 +270,21 @@ async def process_chat_message(
             file_name = os.path.basename(file_path)
             file_size = os.path.getsize(file_path)
             file_info = f"File attached: {file_name} (size: {file_size} bytes)"
-            file_id = chat.add_file_to_chat(chat_id, file_name, file_path)
-            chat.add_message(chat_id, file_info, is_user=True, file_id=file_id)
+            file_id = chat_manager.add_file_to_chat(chat_id, file_name, file_path)
+            chat_manager.add_message(
+                db, chat_id, file_info, is_user=True, file_id=file_id
+            )
 
         bot_response = ""
         async for chunk in chat_with_retry_stream(
-            user_id, chat_id, message, file_content
+            user_id, chat_id, message, feature, file_content
         ):
             bot_response += chunk
             yield chunk
 
         # Tambahkan pesan user dan respons dari bot ke riwayat chat
         if bot_response:
-            chat.add_message(chat_id, bot_response, is_user=False)
+            chat_manager.add_message(db, chat_id, bot_response, is_user=False)
 
     except ValueError as ve:
         logger.error(f"ValueError in process_chat: {str(ve)}")
@@ -138,70 +295,27 @@ async def process_chat_message(
         yield f"Terjadi kesalahan: {str(e)}"
 
 
-async def read_file_content(file_path):
-    try:
-        with open(file_path, "rb") as file:
-            file_content = file.read()
-        file_extension = os.path.splitext(file_path)[1].lower()
-        if file_extension in [".jpg", ".jpeg", ".png", ".gif"]:
-            return {
-                "type": "image",
-                "source": {
-                    "type": "base64",
-                    "media_type": f"image/{file_extension[1:]}",
-                    "data": base64.b64encode(file_content).decode("utf-8"),
-                },
-            }
-        else:
-            return {
-                "type": "text",
-                "text": file_content.decode("utf-8", errors="ignore"),
-            }
-    except Exception as e:
-        logger.error(f"Error reading file: {str(e)}")
-        return None
-
-
-def get_chat_history(chat_id: int):
-    """
-    Mengambil riwayat chat.
-
-    Args:
-        chat_id (int): ID chat.
-
-    Returns:
-        List[Dict[str, any]]: Daftar pesan dalam chat, termasuk informasi file jika ada.
-    """
-    history = chat.get_chat_history(chat_id)
-    for message in history:
-        if message.get("file_path"):
-            message["file_url"] = f"/uploads/{os.path.basename(message['file_path'])}"
-    return history
-
-
 async def chat_with_retry_stream(
-    user_id: str, chat_id: int, message: str, file_content=None
+    user_id: str,
+    chat_id: str,
+    message: str,
+    feature: Feature = Feature.GENERAL,
+    file_content=None,
 ):
     """
-    Fungsi untuk mengirim pesan ke Claude API dengan retry dan streaming respons.
-
-    Fungsi ini mengirimkan pesan pengguna ke API Claude, menangani potensi error,
-    dan melakukan retry jika diperlukan. Respons dari API distream kembali ke pemanggil.
+    Mengirim pesan ke Claude API dengan mekanisme retry dan streaming respons.
 
     Args:
-        user_id (str): ID unik pengguna untuk melacak riwayat percakapan.
-        message (str): Pesan dari pengguna yang akan dikirim ke API.
+        user_id (str): ID unik pengguna.
+        chat_id (int): ID chat.
+        message (str): Pesan dari pengguna.
+        file_content (Optional): Konten file yang diunggah, jika ada.
 
     Yields:
-        str: Potongan-potongan respons dari model AI, distream secara real-time.
+        str: Potongan-potongan respons dari model AI.
 
     Raises:
         Exception: Jika jumlah maksimum percobaan retry tercapai tanpa respons sukses.
-
-    Note:
-        - Fungsi ini menggunakan riwayat percakapan untuk memberikan konteks ke API.
-        - Riwayat percakapan disimpan dengan batasan 10 pesan terakhir.
-        - Error seperti RateLimitError, APIError, dll. ditangani dengan retry.
     """
     max_retries = 3
     retry_delay = 1
@@ -210,13 +324,14 @@ async def chat_with_retry_stream(
         try:
             logger.info(f"Attempt {attempt + 1} for user {user_id}, chat {chat_id}")
 
-            chat_history = chat.get_chat_messages(chat_id)
+            chat_history = await get_chat_messages(Session, chat_id)
             logger.info(f"Retrieved {len(chat_history)} messages from chat history")
 
-            knowledge_base_items = kb.get_all_items()
+            knowledge_base_items = await kb.get_all_items()
             logger.info(
                 f"Retrieved {len(knowledge_base_items)} items from knowledge base"
             )
+
             knowledge_str = "\n".join(
                 [
                     f"Q: {item.get('question', '')}\nA: {item.get('answer', '')}"
@@ -229,79 +344,40 @@ async def chat_with_retry_stream(
                 ]
             )
 
-            system_message = f"""Anda adalah asisten AI untuk muatmuat.com. Gunakan informasi berikut untuk menjawab pertanyaan:
-            
-            {knowledge_str}
-            
+            system_message = (
+                get_system_prompt(feature)
+                + f"\n\nInformasi tambahan:\n\n{knowledge_str}"
+                + """
             Jika pertanyaan tidak terkait dengan informasi di atas, jawab dengan bijak bahwa Anda tidak memiliki informasi tersebut.
             Tidak perlu meminta maaf.
             Kamu tetap harus meyakinkan user bahwa kamu masih bisa menjawab pertanyaan lain"""
+            )
 
-            messages = []
-            last_role = None
-            for msg in chat_history:
-                role = "user" if msg["is_user"] else "assistant"
-                if role == last_role:
-                    # Jika peran sama dengan sebelumnya, tambahkan pesan dummy dari peran lainnya
-                    dummy_role = "assistant" if role == "user" else "user"
-                    dummy_content = (
-                        "I understand."
-                        if dummy_role == "assistant"
-                        else "Please continue."
-                    )
-                    messages.append({"role": dummy_role, "content": dummy_content})
-                messages.append({"role": role, "content": msg["content"]})
-                last_role = role
+            messages = prepare_messages(chat_history, message, file_content)
 
-            # Pastikan pesan terakhir adalah dari assistant sebelum menambahkan pesan user baru
-            if last_role == "user" or last_role is None:
-                messages.append(
-                    {
-                        "role": "assistant",
-                        "content": "I understand. How can I help you?",
-                    }
+            async with AsyncAnthropic(api_key=CLAUDE_API_KEY) as client:
+                stream = await client.messages.create(
+                    model=MODEL_NAME,
+                    messages=messages,
+                    system=system_message,
+                    max_tokens=1000,
+                    temperature=0,
+                    stream=True,
                 )
 
-            user_message_content = [{"type": "text", "text": message}]
-            if file_content:
-                user_message_content.append(file_content)
+                async for chunk in stream:
+                    if chunk.type == "content_block_delta":
+                        yield chunk.delta.text
 
-            messages.append({"role": "user", "content": user_message_content})
-            logger.info(f"Prepared {len(messages)} messages for API request")
-            logger.debug(f"Messages: {json.dumps(messages, indent=2)}")
-
-            try:
-                async with AsyncAnthropic(api_key=CLAUDE_API_KEY) as client:
-                    stream = await client.messages.create(
-                        model="claude-3-sonnet-20240229",
-                        messages=messages,
-                        system=system_message,
-                        max_tokens=1000,
-                        temperature=0,
-                        stream=True,
-                    )
-
-                    full_response = ""
-                    logger.info(
-                        f"Starting to process stream response for user {user_id}, chat {chat_id}"
-                    )
-                    async for chunk in stream:
-                        if chunk.type == "content_block_delta":
-                            full_response += chunk.delta.text
-                            yield chunk.delta.text
-
-                logger.info(
-                    f"Finished processing stream response for user {user_id}, chat {chat_id}"
-                )
-                return
-            except Exception as e:
-                logger.error(
-                    f"Error in API request for user {user_id}: {str(e)}", exc_info=True
-                )
-                raise
+            logger.info(
+                f"Finished processing stream response for user {user_id}, chat {chat_id}"
+            )
+            return
 
         except Exception as e:
-            logger.error(f"Unhandled error for user {user_id}: {str(e)}", exc_info=True)
+            logger.error(
+                f"Error in API request for user {user_id}: {str(e)}", exc_info=True
+            )
             if attempt == max_retries - 1:
                 raise
             await asyncio.sleep(retry_delay)
@@ -310,58 +386,195 @@ async def chat_with_retry_stream(
     raise Exception("Maximum retry attempts reached without successful response.")
 
 
-def get_all_chats():
+def prepare_messages(chat_history, new_message, file_content=None):
     """
-    Mengambil semua chat dari database.
-
-    Returns:
-        List[Dict]: Daftar semua chat dengan informasi id, title, dan created_at.
-    """
-    return chat.get_all_chats()
-
-
-def get_user_chats(user_id: str):
-    return chat.get_user_chats(user_id)
-
-
-def get_chat_messages(chat_id: int) -> List[Dict[str, Any]]:
-    logging.info(f"Fetching messages for chat_id: {chat_id}")
-    try:
-        db = SessionLocal()
-        messages = chat.get_chat_messages(chat_id)
-        logging.info(f"Retrieved {len(messages)} messages for chat_id {chat_id}")
-        return messages
-    except Exception as e:
-        logging.error(
-            f"Error fetching messages for chat_id {chat_id}: {str(e)}", exc_info=True
-        )
-        raise
-    finally:
-        db.close()
-
-
-def create_new_chat(user_id: str):
-    return chat.create_chat(user_id=user_id)
-
-
-def delte_chat(user_id: str):
-    return chat.delte_chat(user_id)
-
-
-def is_first_message(chat_id: int) -> bool:
-    """
-    Memeriksa apakah ini adalah pesan pertama dalam chat.
-    """
-    messages = chat.get_chat_messages(chat_id)
-    return len(messages) == 0
-
-
-def update_chat_title(chat_id: int, title: str):
-    """
-    Mengupdate judul chat.
+    Menyiapkan pesan untuk dikirim ke API Claude.
 
     Args:
-        chat_id (int): ID chat yang akan diupdate.
-        title (str): Judul baru untuk chat.
+        chat_history (List[Dict]): Riwayat chat.
+        new_message (str): Pesan baru dari pengguna.
+        file_content (Optional): Konten file yang diunggah, jika ada.
+
+    Returns:
+        List[Dict]: Daftar pesan yang siap dikirim ke API.
     """
-    return chat.update_chat_title(chat_id, title)
+    messages = []
+    last_role = None
+    for msg in chat_history:
+        role = "user" if msg["is_user"] else "assistant"
+        if role == last_role:
+            dummy_role = "assistant" if role == "user" else "user"
+            dummy_content = (
+                "I understand." if dummy_role == "assistant" else "Please continue."
+            )
+            messages.append({"role": dummy_role, "content": dummy_content})
+        messages.append({"role": role, "content": msg["content"]})
+        last_role = role
+
+    if last_role == "user" or last_role is None:
+        messages.append(
+            {"role": "assistant", "content": "I understand. How can I help you?"}
+        )
+
+    user_message_content = [{"type": "text", "text": new_message}]
+    if file_content:
+        user_message_content.append(file_content)
+
+    messages.append({"role": "user", "content": user_message_content})
+
+    return messages
+
+
+async def get_chat_messages(db: Session, chat_id: str) -> List[dict]:
+    """
+    Mengambil semua pesan untuk chat tertentu.
+
+    Args:
+        db (Session): Sesi database SQLAlchemy.
+        chat_id (int): ID chat yang pesannya akan diambil.
+
+    Returns:
+        List[dict]: Daftar pesan dalam format dictionary.
+
+    Raises:
+        HTTPException: Jika terjadi kesalahan server internal saat mengambil pesan chat.
+    """
+    try:
+        return chat_manager.get_chat_messages(db, chat_id)
+    except Exception as e:
+        logger.error(f"Error getting chat messages: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail="Internal server error while fetching chat messages"
+        )
+
+
+async def create_new_chat(db: Session, user_id: int) -> Dict[str, Any]:
+    """
+    Membuat chat baru untuk pengguna tertentu.
+
+    Args:
+        db (Session): Sesi database SQLAlchemy.
+        user_id (int): ID pengguna yang membuat chat.
+
+    Returns:
+        models.Chat: Objek Chat yang baru dibuat.
+
+    Raises:
+        HTTPException: Jika terjadi kesalahan server internal saat membuat chat baru.
+    """
+    try:
+        new_chat = chat_manager.create_chat(db, user_id)
+        return {
+            "id": str(new_chat.id),
+            "user_id": new_chat.user_id,
+            "title": new_chat.title,
+            "created_at": new_chat.created_at.isoformat(),
+        }
+    except Exception as e:
+        logger.error(f"Error creating new chat: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail="Internal server error while creating new chat"
+        )
+
+
+async def add_knowledge_base_item(
+    db: Session, question: str, answer: str, image: Optional[UploadFile] = None
+) -> dict:
+    """
+    Menambahkan item baru ke knowledge base.
+
+    Args:
+        db (Session): Sesi database SQLAlchemy.
+        question (str): Pertanyaan untuk item knowledge base.
+        answer (str): Jawaban untuk item knowledge base.
+        image (Optional[UploadFile]): File gambar yang diunggah, jika ada.
+
+    Returns:
+        dict: Informasi tentang item knowledge base yang baru ditambahkan.
+
+    Raises:
+        HTTPException: Jika terjadi kesalahan server internal saat menambahkan item ke knowledge base.
+    """
+    try:
+        image_path = None
+        if image:
+            image_path = await save_uploaded_file(image)
+
+        return kb.add_item(db, question, answer, image_path)
+    except Exception as e:
+        logger.error(f"Error adding knowledge base item: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail="Internal server error while adding knowledge base item",
+        )
+
+
+async def update_chat_title(db: Session, chat_id: str, title: str) -> bool:
+    """
+    Memperbarui judul chat.
+
+    Args:
+        db (Session): Sesi database SQLAlchemy.
+        chat_id (int): ID chat yang akan diperbarui.
+        title (str): Judul baru untuk chat.
+
+    Returns:
+        bool: True jika berhasil diperbarui, False jika tidak.
+
+    Raises:
+        HTTPException: Jika terjadi kesalahan server internal saat memperbarui judul chat.
+    """
+    try:
+        return chat_manager.update_chat_title(db, chat_id, title)
+    except Exception as e:
+        logger.error(f"Error updating chat title: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail="Internal server error while updating chat title"
+        )
+
+
+async def delete_chat(db: Session, chat_id: str) -> bool:
+    """
+    Menghapus chat berdasarkan ID.
+
+    Args:
+        db (Session): Sesi database SQLAlchemy.
+        chat_id (int): ID chat yang akan dihapus.
+
+    Returns:
+        bool: True jika berhasil dihapus, False jika tidak.
+
+    Raises:
+        HTTPException: Jika terjadi kesalahan server internal saat menghapus chat.
+    """
+    try:
+        return chat_manager.delete_chat(db, chat_id)
+    except Exception as e:
+        logger.error(f"Error deleting chat: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail="Internal server error while deleting chat"
+        )
+
+
+async def get_latest_chat_id(db: Session, user_id: str) -> Optional[int]:
+    """
+    Mendapatkan ID chat terbaru untuk pengguna tertentu.
+
+    Args:
+        db (Session): Sesi database SQLAlchemy.
+        user_id (int): ID pengguna.
+
+    Returns:
+        Optional[int]: ID chat terbaru, atau None jika tidak ada.
+
+    Raises:
+        HTTPException: Jika terjadi kesalahan server internal saat mengambil ID chat terbaru.
+    """
+    try:
+        return chat_manager.get_latest_chat_id(db, user_id)
+    except Exception as e:
+        logger.error(f"Error getting latest chat ID: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail="Internal server error while fetching latest chat ID",
+        )

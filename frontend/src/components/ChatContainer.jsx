@@ -191,7 +191,7 @@ function ChatContainer({ chatId, onBackToList, userId }) {
           messages={messages}
           onPreviewFile={handlePreviewFile}
           isGenerating={isGenerating}
-          // onRetry={handleRetry}
+        // onRetry={handleRetry}
         />
       </div>
       <FileUpload onFileUpload={handleFileUpload} currentFiles={currentFiles} />

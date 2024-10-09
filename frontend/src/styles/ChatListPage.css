@@ -78,3 +78,17 @@
   font-size: 12px;
   color: #999;
 }
+
+.chat-delete {
+  background: none;
+  border: none;
+  color: #ff4d4f;
+  cursor: pointer;
+  padding: 5px;
+  margin-left: auto;
+}
+
+.chat-delete:hover {
+  background-color: #ffe6e6;
+  border-radius: 4px;
+}

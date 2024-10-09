@@ -1,47 +1,85 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean
+from sqlalchemy import (
+    Column,
+    Integer,
+    String,
+    Text,
+    DateTime,
+    Boolean,
+    ForeignKey,
+    Index,
+)
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
-from ..database import Base
+import uuid
+from app.database import Base
 
 
 class User(Base):
     __tablename__ = "users"
-
     id = Column(Integer, primary_key=True, index=True)
-    username = Column(String, unique=True, index=True)
-    hashed_password = Column(String)
-    chats = relationship("Chat", back_populates="user")
+    username = Column(String, unique=True, index=True, nullable=False)
+    hashed_password = Column(String, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    chats = relationship("Chat", back_populates="user", cascade="all, delete-orphan")
 
 
 class Chat(Base):
     __tablename__ = "chats"
-
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"))
-    title = Column(String)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    title = Column(String, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     user = relationship("User", back_populates="chats")
-    messages = relationship("Message", back_populates="chat")
-
+    messages = relationship(
+        "Message", back_populates="chat", cascade="all, delete-orphan"
+    )
+    files = relationship(
+        "ChatFile", back_populates="chat", cascade="all, delete-orphan"
+    )
+    __table_args__ = (
+        Index("idx_chats_user_id", "user_id"),
+        Index("idx_chats_created_at", "created_at"),
+    )
 
 class Message(Base):
     __tablename__ = "messages"
-
-    id = Column(Integer, primary_key=True, index=True)
-    chat_id = Column(Integer, ForeignKey("chats.id"))
-    content = Column(String)
-    is_user = Column(Boolean)
-    timestamp = Column(DateTime(timezone=True), server_default=func.now())
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    content = Column(Text, nullable=False)
+    is_user = Column(Boolean, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    chat_id = Column(UUID(as_uuid=True), ForeignKey("chats.id"), nullable=False)
+    file_id = Column(UUID(as_uuid=True), ForeignKey("chat_files.id"), nullable=True)
     chat = relationship("Chat", back_populates="messages")
-    file = relationship("ChatFile", back_populates="message", uselist=False)
-
+    file = relationship("ChatFile", back_populates="messages")
+    __table_args__ = (
+        Index("idx_messages_chat_id", "chat_id"),
+        Index("idx_messages_created_at", "created_at"),
+        Index("idx_messages_file_id", "file_id"),  
+    )
 
 class ChatFile(Base):
     __tablename__ = "chat_files"
-
-    id = Column(Integer, primary_key=True, index=True)
-    message_id = Column(Integer, ForeignKey("messages.id"))
-    file_name = Column(String)
-    file_path = Column(String)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    chat_id = Column(UUID(as_uuid=True), ForeignKey("chats.id"), nullable=False)
+    file_name = Column(String, nullable=False)
+    file_path = Column(String, nullable=False)
     uploaded_at = Column(DateTime(timezone=True), server_default=func.now())
-    message = relationship("Message", back_populates="file")
+    chat = relationship("Chat", back_populates="files")
+    messages = relationship("Message", back_populates="file")
+    __table_args__ = (
+        Index("idx_chat_files_chat_id", "chat_id"),
+        Index("idx_chat_files_uploaded_at", "uploaded_at"),
+    )
+
+
+class KnowledgeBase(Base):
+    __tablename__ = "knowledge_base"
+    id = Column(String, primary_key=True, default=uuid.uuid4, index=True)
+    question = Column(Text, nullable=False)
+    answer = Column(Text, nullable=False)
+    image_path = Column(String, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())

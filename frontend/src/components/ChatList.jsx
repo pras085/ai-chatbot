@@ -4,12 +4,14 @@ import { createNewChat, deleteChat } from "../services/api"; // Tambahkan API de
 
 const ChatList = ({ chats = [], onSelectChat, onNewChat, userId }) => {
   const [isCreatingChat, setIsCreatingChat] = useState(false);
-  const [contextMenu, setContextMenu] = useState(null);
 
   // Fungsi untuk membuat chat baru
   const handleCreateNewChat = async () => {
     setIsCreatingChat(true);
     try {
+      if (!userId) {
+        throw new Error("User ID is not available");
+      }
       const newChat = await createNewChat(userId);
       console.log("New chat created:", newChat);
       onNewChat(newChat);
@@ -26,21 +28,21 @@ const ChatList = ({ chats = [], onSelectChat, onNewChat, userId }) => {
     return title && typeof title === "string" ? title[0].toUpperCase() : "n";
   };
   // Fungsi untuk menampilkan context menu pada klik kanan
-  const handleRightClick = (event, chatId) => {
-    event.preventDefault(); // Mencegah context menu browser default
-    setContextMenu({
-      mouseX: event.clientX,
-      mouseY: event.clientY,
-      chatId,
-    });
-  };
+  // const handleRightClick = (event, chatId) => {
+  //   event.preventDefault(); // Mencegah context menu browser default
+  //   setContextMenu({
+  //     mouseX: event.clientX,
+  //     mouseY: event.clientY,
+  //     chatId,
+  //   });
+  // };
 
   // Fungsi untuk menghapus chat
-  const handleDeleteChat = async (chatId) => {
+  const handleDeleteChat = async (userId, chatId) => {
     try {
-      await deleteChat(chatId); // Panggil API deleteChat
+      await deleteChat(userId, chatId); // Panggil API deleteChat
       alert("Chat berhasil dihapus");
-      setContextMenu(null);
+      onNewChat(chats.filter((chat) => chat.chat_id !== chatId));
     } catch (error) {
       alert("Gagal menghapus chat. Silakan coba lagi.");
     }
@@ -66,7 +68,6 @@ const ChatList = ({ chats = [], onSelectChat, onNewChat, userId }) => {
               key={chat.chat_id}
               className="chat-item"
               onClick={() => onSelectChat(chat.chat_id)}
-              // onContextMenu={(event) => handleRightClick(event, chat.chat_id)}
             >
               <div className="chat-avatar">{getAvatarText(chat.title)}</div>
               <div className="chat-content">
@@ -79,7 +80,15 @@ const ChatList = ({ chats = [], onSelectChat, onNewChat, userId }) => {
                     : "Unknown date"}
                 </div>
               </div>
-              <div className="chat-delete" />
+              <button
+                className="chat-delete"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDeleteChat(userId, chat.chat_id);
+                }}
+              >
+                Delete
+              </button>
             </li>
           ))}
         </ul>

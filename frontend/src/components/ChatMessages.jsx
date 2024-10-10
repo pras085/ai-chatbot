@@ -3,6 +3,7 @@ import ReactMarkdown from "react-markdown";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { FileViewer } from '../components/FileViewer'
 import {
   faCopy,
   faSpinner,
@@ -88,10 +89,47 @@ function ChatMessages({ messages, onPreviewFile, isGenerating }) {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  const renderFileAttachment = (message) => {
+    if (message.file && message.file instanceof File) {
+      // Kasus untuk file yang baru diunggah
+      return (
+        <div className="file-attachment">
+          {message.file.type.startsWith("image/") ? (
+            <img
+              src={URL.createObjectURL(message.file)}
+              alt="Uploaded"
+              className="uploaded-image"
+              onClick={() => onPreviewFile(message.file)}
+            />
+          ) : (
+            <span onClick={() => onPreviewFile(message.file)}>
+              {message.file.name}
+            </span>
+          )}
+        </div>
+      );
+    } else if (message.file_id) {
+      // Kasus untuk file yang diambil dari server
+      return (
+        <div className="file-attachment">
+          <FileViewer file={{
+            file_name: message.file_name,
+            file_url: message.file_url,
+            file_path: message.file_path
+          }}
+            onPreviewFile={() => onPreviewFile(message)}
+          />
+        </div>
+      );
+    }
+    return null;
+  };
+
   return (
     <div id="chat-messages">
       {messages.map((message, index) => (
-        <div key={index} className={`message ${message.type}`}>
+
+        < div key={index} className={`message ${message.type}`}>
           <Message content={message.content} />
           {message.type === "bot-message" && (
             <div className="message-actions">
@@ -104,22 +142,7 @@ function ChatMessages({ messages, onPreviewFile, isGenerating }) {
               </button>
             </div>
           )}
-          {message.file && (
-            <div className="file-attachment">
-              {message.file.type.startsWith("image/") ? (
-                <img
-                  src={URL.createObjectURL(message.file)}
-                  alt="Uploaded"
-                  className="uploaded-image"
-                  onClick={() => onPreviewFile(message.file)}
-                />
-              ) : (
-                <span onClick={() => onPreviewFile(message.file)}>
-                  {message.file.name}
-                </span>
-              )}
-            </div>
-          )}
+          {renderFileAttachment(message)}
           {message.type === "bot-message" &&
             index === messages.length - 1 &&
             isGenerating && (
@@ -130,9 +153,11 @@ function ChatMessages({ messages, onPreviewFile, isGenerating }) {
               />
             )}
         </div>
-      ))}
+      ))
+      }
       <div ref={messagesEndRef} />
-    </div>
+    </div >
+
   );
 }
 

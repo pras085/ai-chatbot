@@ -55,7 +55,16 @@ export const apiRequest = async (endpoint, options = {}) => {
 
     return response;
   } catch (error) {
-    console.error(`API request failed for endpoint ${endpoint}:`, error);
+    if (error.response) {
+      console.error("Server error:", error.response.data);
+      // Tampilkan pesan error ke pengguna
+    } else if (error.request) {
+      console.error("Network error:", error.request);
+      // Tampilkan pesan error jaringan ke pengguna
+    } else {
+      console.error("Error:", error.message);
+      // Tampilkan pesan error umum ke pengguna
+    }
     throw error;
   }
 };
@@ -66,21 +75,26 @@ export const getUser = async () => {
 };
 
 /**
- * Mengirim pesan chat baru.
+ * Mengirim pesan chat baru dan menangani respons streaming.
  *
  * @param {string} userId - ID pengguna
- * @param {number} chatId - ID chat
+ * @param {string} chatId - ID chat
  * @param {string} message - Isi pesan
  * @param {File} file - File yang diunggah (opsional)
  * @param {AbortSignal} signal - Signal untuk abort request (opsional)
- * @returns {Promise<Response>} - Response dari server
+ * @param {function} onChunk - Callback untuk setiap chunk pesan
+ * @param {function} onDone - Callback ketika streaming selesai
+ * @param {function} onError - Callback untuk menangani error
  */
 export const sendChatMessage = async (
   userId,
   chatId,
   message,
   file,
-  signal
+  signal,
+  onChunk,
+  onDone,
+  onError
 ) => {
   const formData = new FormData();
   formData.append("message", message);
@@ -89,12 +103,57 @@ export const sendChatMessage = async (
   if (file) {
     formData.append("file", file);
   }
-  const response = await apiRequest(`/chat/send`, {
-    method: "POST",
-    body: formData,
-    signal,
-  });
-  return response.json();
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/chat/send`, {
+      method: "POST",
+      body: formData,
+      signal,
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("token")}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n\n");
+      buffer = lines.pop();
+
+      for (const line of lines) {
+        if (line.startsWith("data: ")) {
+          try {
+            const data = JSON.parse(line.slice(5));
+            switch (data.type) {
+              case "message":
+                onChunk(data.content);
+                break;
+              case "error":
+                onError(new Error(data.content));
+                break;
+              case "done":
+                onDone();
+                break;
+            }
+          } catch (e) {
+            console.error("Error parsing SSE data:", e);
+          }
+        }
+      }
+    }
+  } catch (error) {
+    onError(error);
+  }
 };
 
 /**
@@ -157,13 +216,26 @@ export const uploadFile = async (file) => {
 /**
  * Menghapus chat tertentuu untuk pengguna tertentu.
  *
- * @param {string} userId - ID pengguna
  * @param {string} chatId - ID chat
- * @returns {Promise<Object>} - Objek berisi informasi chat baru
  */
-export const deleteChat = async (userId, chatId) => {
-  const response = await apiRequest(`/api/${userId}chats/${chatId}`, {
-    method: "DELETE",
-  });
-  return response.json();
+export const deleteChat = async (chatId) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/chats/${chatId}`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("token")}`,
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || "Failed to delete chat");
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error deleting chat:", error);
+    throw error;
+  }
 };

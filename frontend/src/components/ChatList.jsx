@@ -1,8 +1,8 @@
 import { React, useState } from "react";
 import "../styles/ChatListPage.css";
-import { createNewChat, deleteChat } from "../services/api"; // Tambahkan API deleteChat
+import { createNewChat } from "../services/api";
 
-const ChatList = ({ chats = [], onSelectChat, onNewChat, userId }) => {
+const ChatList = ({ chats = [], onSelectChat, onNewChat, onDeleteChat, userId }) => {
   const [isCreatingChat, setIsCreatingChat] = useState(false);
 
   // Fungsi untuk membuat chat baru
@@ -24,6 +24,18 @@ const ChatList = ({ chats = [], onSelectChat, onNewChat, userId }) => {
     }
   };
 
+  const handleDeleteChat = async (chatId) => {
+    if (window.confirm("Are you sure you want to delete this chat?")) {
+      try {
+        await onDeleteChat(chatId);  // Panggil fungsi dari prop, bukan API langsung
+        // Tidak perlu alert di sini, karena penanganan sudah dilakukan di ChatListPage
+      } catch (error) {
+        console.error(`Error deleting chat: ${chatId}:`, error);
+        alert(`Error deleting chat: ${error.message}`);
+      }
+    }
+  };
+
   const getAvatarText = (title) => {
     return title && typeof title === "string" ? title[0].toUpperCase() : "n";
   };
@@ -36,17 +48,6 @@ const ChatList = ({ chats = [], onSelectChat, onNewChat, userId }) => {
   //     chatId,
   //   });
   // };
-
-  // Fungsi untuk menghapus chat
-  const handleDeleteChat = async (userId, chatId) => {
-    try {
-      await deleteChat(userId, chatId); // Panggil API deleteChat
-      alert("Chat berhasil dihapus");
-      onNewChat(chats.filter((chat) => chat.chat_id !== chatId));
-    } catch (error) {
-      alert("Gagal menghapus chat. Silakan coba lagi.");
-    }
-  };
 
   return (
     <div className="chat-list-container">
@@ -84,7 +85,7 @@ const ChatList = ({ chats = [], onSelectChat, onNewChat, userId }) => {
                 className="chat-delete"
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleDeleteChat(userId, chat.chat_id);
+                  handleDeleteChat(chat.chat_id);
                 }}
               >
                 Delete

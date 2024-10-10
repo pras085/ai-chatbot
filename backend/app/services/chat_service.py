@@ -27,6 +27,12 @@ from config import Config
 import asyncio
 from app.utils.feature_utils import Feature
 from typing import List, Dict, Any
+from uuid import UUID
+from app.database.database import SessionLocal
+import json
+from starlette.responses import StreamingResponse
+
+import traceback
 
 logger = logging.getLogger(__name__)
 
@@ -146,12 +152,11 @@ async def get_user_chats(db: Session, user_id: int) -> List[Dict[str, Any]]:
         )
 
 
-async def is_first_message(db: Session, chat_id: str) -> bool:
+async def is_first_message(chat_id: UUID) -> bool:
     """
     Memeriksa apakah ini adalah pesan pertama dalam chat.
 
     Args:
-        db (Session): Sesi database SQLAlchemy.
         chat_id (int): ID chat yang akan diperiksa.
 
     Returns:
@@ -161,7 +166,7 @@ async def is_first_message(db: Session, chat_id: str) -> bool:
         HTTPException: Jika terjadi kesalahan server internal saat memeriksa pesan.
     """
     try:
-        messages = await get_chat_messages(db, chat_id)
+        messages = await get_chat_messages(chat_id)
         return len(messages) == 0
     except Exception as e:
         logger.error(f"Error checking if first message: {str(e)}")
@@ -198,109 +203,88 @@ def get_system_prompt(feature: Feature) -> str:
 
 async def process_chat_message(
     db: Session,
-    user_id: str,
-    chat_id: str,
+    user_id: int,
+    chat_id: UUID,
     message: str,
     feature: Feature = Feature.GENERAL,
     file_path: Optional[str] = None,
 ):
-    """
-    Memproses pesan chat, termasuk menambahkan pesan ke database dan menghasilkan respons AI.
+    async def event_generator():
+        nonlocal chat_id
+        try:
+            if not message and not file_path:
+                raise ValueError(
+                    "Pesan tidak boleh kosong dan tidak ada file yang diunggah"
+                )
 
-    Args:
-        db (Session): Sesi database SQLAlchemy.
-        user_id (int): ID pengguna yang mengirim pesan.
-        chat_id (int): ID chat tempat pesan dikirim.
-        message (str): Isi pesan.
-        file_path (Optional[str]): Path file yang diunggah, jika ada.
+            if chat_id is None:
+                chat_id = create_new_chat(db, user_id)
 
-    Yields:
-        str: Respons AI atau pesan error.
+            if await is_first_message(chat_id):
+                title = message[:50] + "..." if len(message) > 50 else message
+                await update_chat_title(db, chat_id, title)
 
-    Notes:
-        Fungsi ini menggunakan generator untuk streaming respons.
-    """
-    logger.info(
-        f"Processing message for user {user_id}, chat {chat_id}, feature {feature}"
-    )
-    try:
-        if not message and not file_path:
-            raise ValueError(
-                "Pesan tidak boleh kosong dan tidak ada file yang diunggah"
-            )
+            chat_history = chat_manager.get_chat_messages(db, chat_id)
+            if chat_history and chat_history[-1]["is_user"]:
+                placeholder_response = "I'm processing your previous message."
+                chat_manager.add_message(
+                    db, chat_id, placeholder_response, is_user=False
+                )
 
-        # Buat chat baru jika chat_id tidak ada (percakapan baru)
-        if chat_id is None:
-            logger.info(f"Creating new chat for user {user_id}")
-            chat_id = create_new_chat(db, user_id)
+            kb_results = kb.search_items(message)
+            if kb_results:
+                kb_response = kb_results[0]
+                response = f"{kb_response.get('answer', '')}"
+                if kb_response.get("image_path"):
+                    response += f"\n {kb_response['image_path']}"
+                chat_manager.add_message(db, chat_id, response, is_user=False)
+                yield f"data: {json.dumps({'type': 'message', 'content': response})}\n\n"
+                yield f"data: {json.dumps({'type': 'done'})}\n\n"
+                return
 
-        # Logika untuk menentukan judul chat berdasarkan pesan pertama
-        if await is_first_message(db, chat_id):
-            title = message[:50] + "..." if len(message) > 50 else message
-            logger.info(f"First message for chat {chat_id}, updating title")
-            await update_chat_title(db, chat_id, title)
+            chat_manager.add_message(db, chat_id, message, is_user=True)
 
-        # Ambil riwayat pesan dan cek apakah pesan terakhir adalah dari user
-        chat_history = chat_manager.get_chat_messages(db, chat_id)
-        if chat_history and chat_history[-1]["is_user"]:
-            # Tambahkan placeholder dari assistant jika ada pesan user berturut-turut
-            placeholder_response = "I'm processing your previous message."
-            chat_manager.add_message(db, chat_id, placeholder_response, is_user=False)
+            file_id = None
+            file_content = None
+            if file_path:
+                file_name = os.path.basename(file_path)
+                file_size = os.path.getsize(file_path)
+                file_info = f"File attached: {file_name} (size: {file_size} bytes)"
+                file_id = chat_manager.add_file_to_chat(
+                    db, chat_id, file_name, file_path
+                )
+                chat_manager.add_message(
+                    db, chat_id, file_info, is_user=True, file_id=file_id
+                )
 
-        # Pencarian di knowledge base
-        kb_results = kb.search_items(message)
-        if kb_results:
-            kb_response = kb_results[0]
-            response = f"{kb_response.get('answer', '')}"
+            bot_response = ""
+            async for chunk in chat_with_retry_stream(
+                user_id, chat_id, message, feature, file_content
+            ):
+                bot_response += chunk
+                yield f"data: {json.dumps({'type': 'message', 'content': chunk})}\n\n"
 
-            if kb_response.get("image_path"):
-                response += f"\n {kb_response['image_path']}"
+            if bot_response:
+                chat_manager.add_message(db, chat_id, bot_response, is_user=False)
 
-            chat_manager.add_message(db, chat_id, response, is_user=False)
-            yield response
-            return
+            yield f"data: {json.dumps({'type': 'done'})}\n\n"
 
-        chat_manager.add_message(db, chat_id, message, is_user=True)
+        except ValueError as ve:
+            logger.error(f"ValueError in process_chat: {str(ve)}")
+            yield f"data: {json.dumps({'type': 'error', 'content': str(ve)})}\n\n"
+        except Exception as e:
+            logger.error(f"Error in process_chat: {str(e)}")
+            yield f"data: {json.dumps({'type': 'error', 'content': str(e)})}\n\n"
 
-        # Jika ada file, baca kontennya
-        file_id = None
-        file_content = None
-
-        if file_path:
-            file_name = os.path.basename(file_path)
-            file_size = os.path.getsize(file_path)
-            file_info = f"File attached: {file_name} (size: {file_size} bytes)"
-            file_id = chat_manager.add_file_to_chat(chat_id, file_name, file_path)
-            chat_manager.add_message(
-                db, chat_id, file_info, is_user=True, file_id=file_id
-            )
-
-        bot_response = ""
-        async for chunk in chat_with_retry_stream(
-            user_id, chat_id, message, feature, file_content
-        ):
-            bot_response += chunk
-            yield chunk
-
-        # Tambahkan pesan user dan respons dari bot ke riwayat chat
-        if bot_response:
-            chat_manager.add_message(db, chat_id, bot_response, is_user=False)
-
-    except ValueError as ve:
-        logger.error(f"ValueError in process_chat: {str(ve)}")
-        yield f"Error: {str(ve)}"
-
-    except Exception as e:
-        logger.error(f"Error in process_chat: {str(e)}")
-        yield f"Terjadi kesalahan: {str(e)}"
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 
 async def chat_with_retry_stream(
-    user_id: str,
-    chat_id: str,
+    user_id: int,
+    chat_id: UUID,
     message: str,
     feature: Feature = Feature.GENERAL,
-    file_content=None,
+    file_content: Optional[str] = None,
 ):
     """
     Mengirim pesan ke Claude API dengan mekanisme retry dan streaming respons.
@@ -324,10 +308,10 @@ async def chat_with_retry_stream(
         try:
             logger.info(f"Attempt {attempt + 1} for user {user_id}, chat {chat_id}")
 
-            chat_history = await get_chat_messages(Session, chat_id)
+            chat_history = await get_chat_messages(chat_id)
             logger.info(f"Retrieved {len(chat_history)} messages from chat history")
 
-            knowledge_base_items = await kb.get_all_items()
+            knowledge_base_items = kb.get_all_items()
             logger.info(
                 f"Retrieved {len(knowledge_base_items)} items from knowledge base"
             )
@@ -425,12 +409,11 @@ def prepare_messages(chat_history, new_message, file_content=None):
     return messages
 
 
-async def get_chat_messages(db: Session, chat_id: str) -> List[dict]:
+async def get_chat_messages(chat_id: UUID) -> List[dict]:
     """
     Mengambil semua pesan untuk chat tertentu.
 
     Args:
-        db (Session): Sesi database SQLAlchemy.
         chat_id (int): ID chat yang pesannya akan diambil.
 
     Returns:
@@ -439,6 +422,7 @@ async def get_chat_messages(db: Session, chat_id: str) -> List[dict]:
     Raises:
         HTTPException: Jika terjadi kesalahan server internal saat mengambil pesan chat.
     """
+    db = SessionLocal()
     try:
         return chat_manager.get_chat_messages(db, chat_id)
     except Exception as e:
@@ -448,7 +432,7 @@ async def get_chat_messages(db: Session, chat_id: str) -> List[dict]:
         )
 
 
-async def create_new_chat(db: Session, user_id: int) -> Dict[str, Any]:
+async def create_new_chat(db: Session, user_id: int, title: str = "New Chat"):
     """
     Membuat chat baru untuk pengguna tertentu.
 
@@ -466,9 +450,8 @@ async def create_new_chat(db: Session, user_id: int) -> Dict[str, Any]:
         new_chat = chat_manager.create_chat(db, user_id)
         return {
             "id": str(new_chat.id),
-            "user_id": new_chat.user_id,
             "title": new_chat.title,
-            "created_at": new_chat.created_at.isoformat(),
+            "user_id": new_chat.user_id,
         }
     except Exception as e:
         logger.error(f"Error creating new chat: {str(e)}")
@@ -509,7 +492,7 @@ async def add_knowledge_base_item(
         )
 
 
-async def update_chat_title(db: Session, chat_id: str, title: str) -> bool:
+async def update_chat_title(db: Session, chat_id: UUID, title: str) -> bool:
     """
     Memperbarui judul chat.
 
@@ -533,7 +516,7 @@ async def update_chat_title(db: Session, chat_id: str, title: str) -> bool:
         )
 
 
-async def delete_chat(db: Session, chat_id: str) -> bool:
+async def delete_chat(db: Session, chat_id: UUID, user_id: int):
     """
     Menghapus chat berdasarkan ID.
 
@@ -543,20 +526,24 @@ async def delete_chat(db: Session, chat_id: str) -> bool:
 
     Returns:
         bool: True jika berhasil dihapus, False jika tidak.
-
-    Raises:
-        HTTPException: Jika terjadi kesalahan server internal saat menghapus chat.
     """
+    # Panggil fungsi di chat_manager untuk menghapus chat
     try:
-        return chat_manager.delete_chat(db, chat_id)
+        # Panggilan ke chat_manager.delete_chat dengan argumen yang benar
+        success = chat_manager.delete_chat(db, chat_id, user_id)
+        if not success:
+            raise HTTPException(
+                status_code=404,
+                detail="Chat not found or you don't have permission to delete it",
+            )
+        return {"status": "success", "message": "Chat deleted successfully"}
     except Exception as e:
         logger.error(f"Error deleting chat: {str(e)}")
-        raise HTTPException(
-            status_code=500, detail="Internal server error while deleting chat"
-        )
+        logger.error(traceback.format_exc())  # Menambahkan traceback ke log
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
-async def get_latest_chat_id(db: Session, user_id: str) -> Optional[int]:
+async def get_latest_chat_id(db: Session, user_id: int) -> Optional[UUID]:
     """
     Mendapatkan ID chat terbaru untuk pengguna tertentu.
 

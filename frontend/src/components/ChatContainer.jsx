@@ -1,4 +1,3 @@
-/* eslint-disable no-loop-func */
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import ChatMessages from "./ChatMessages";
 import UserInput from "./UserInput";
@@ -6,28 +5,14 @@ import FileUpload from "./FileUpload";
 import PreviewModal from "./PreviewModal";
 import { sendChatMessage, getChatMessages } from "../services/api";
 
-/**
- * ChatContainer Component
- *
- * Komponen utama untuk menampilkan dan mengelola chat individu.
- * Fitur:
- * - Menampilkan riwayat pesan chat
- * - Memungkinkan pengiriman pesan baru
- * - Menangani upload dan preview file
- * - Menampilkan respons AI secara real-time (streaming)
- *
- * @param {number} chatId - ID chat yang sedang aktif
- * @param {Function} onBackToList - Callback function untuk kembali ke daftar chat
- * @param {string} userId - ID pengguna saat ini
- */
 function ChatContainer({ chatId, onBackToList, userId }) {
   const [messages, setMessages] = useState([]);
   const [currentFiles, setCurrentFiles] = useState([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [previewFile, setPreviewFile] = useState(null);
-  const abortController = useRef(null);
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const abortControllerRef = useRef(null);
 
   useEffect(() => {
     if (chatId) {
@@ -37,7 +22,7 @@ function ChatContainer({ chatId, onBackToList, userId }) {
       console.log("No chat selected");
       onBackToList();
     }
-  }, [chatId]);
+  }, [chatId, onBackToList]);
 
   const loadChatHistory = async () => {
     if (chatId === undefined) {
@@ -66,93 +51,53 @@ function ChatContainer({ chatId, onBackToList, userId }) {
     }
   };
 
-  const sendMessage = useCallback(
-    async (message, file) => {
-      if (isGenerating) return;
-      if (!message && currentFiles.length === 0 && !isGenerating) return;
+  const handleSendMessage = async (message, file) => {
+    if (!message.trim() && !file) return;
 
-      let combinedMessage = message;
-      if (file) {
-        combinedMessage += `\n\n[File attached: ${file.name}]`;
-      }
+    setIsGenerating(true);
+    const newMessage = { content: message, type: "user-message" };
+    setMessages(prevMessages => [...prevMessages, newMessage]);
 
-      if (isGenerating) {
-        if (abortController.current) {
-          abortController.current.abort();
-          return;
-        }
-      }
+    abortControllerRef.current = new AbortController();
 
-      setMessages((prev) => [
-        ...prev,
-        {
-          type: "user-message",
-          content: combinedMessage,
-          file: file || currentFiles[0],
-        },
-      ]);
-      setIsGenerating(true);
-
-      try {
-        abortController.current = new AbortController();
-        console.log("message: ", message);
-        const response = await sendChatMessage(
-          userId,
-          chatId,
-          message,
-          currentFiles[0],
-          abortController.current.signal
-        );
-
-        let fullResponse = "";
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-
-        while (true) {
-          const { value, done } = await reader.read();
-          if (done) break;
-
-          const chunk = decoder.decode(value, { stream: true });
-          // let processedChunk = escapeHTML(chunk);
-
-          fullResponse += chunk;
-
-          setMessages((prev) => {
-            const newMessages = [...prev];
-            if (newMessages[newMessages.length - 1]?.type === "bot-message") {
-              newMessages[newMessages.length - 1].content = fullResponse;
+    try {
+      await sendChatMessage(
+        userId,
+        chatId,
+        message,
+        file,
+        abortControllerRef.current.signal,
+        (chunk) => {
+          setMessages(prevMessages => {
+            const lastMessage = prevMessages[prevMessages.length - 1];
+            if (lastMessage.type === "bot-message") {
+              return [
+                ...prevMessages.slice(0, -1),
+                { ...lastMessage, content: lastMessage.content + chunk }
+              ];
             } else {
-              newMessages.push({ type: "bot-message", content: fullResponse });
+              return [...prevMessages, { content: chunk, type: "bot-message" }];
             }
-            return newMessages;
           });
-        }
-
-        setCurrentFiles([]);
-      } catch (error) {
-        if (error.name === "AbortError") {
-          console.log("Message generation aborted by user");
-          setMessages((prev) => [
-            ...prev,
-            { type: "bot-message", content: "Response generation stopped." },
+        },
+        () => {
+          setIsGenerating(false);
+          setCurrentFiles([]);  // Clear the current files after sending
+        },
+        (error) => {
+          console.error("Error in chat:", error);
+          setMessages(prevMessages => [
+            ...prevMessages,
+            { content: "An error occurred. Please try again.", type: "bot-message" }
           ]);
-        } else {
-          console.error("Error:", error);
-          setMessages((prev) => [
-            ...prev,
-            {
-              type: "bot-message",
-              content: "An error occurred while sending the message.",
-            },
-          ]);
+          setIsGenerating(false);
         }
-      } finally {
-        setIsGenerating(false);
-        abortController.current = null;
-      }
-    },
-    [currentFiles, isGenerating, chatId, userId]
-  );
+      );
+    } catch (error) {
+      console.error("Failed to send message:", error);
+      setIsGenerating(false);
+    }
+  };
 
   const handleFileUpload = useCallback((files) => {
     setCurrentFiles((prev) => [...prev, ...files]);
@@ -165,18 +110,6 @@ function ChatContainer({ chatId, onBackToList, userId }) {
   const handlePreviewFile = useCallback((file) => {
     setPreviewFile(file);
   }, []);
-
-  // const handleRetry = useCallback(
-  //   (messageIndex) => {
-  //     console.log("index", messages[messageIndex]);
-  //     const messageToRetry = messages[messageIndex];
-  //     if (messageToRetry.type === "bot-message") {
-  //       // Ambil pesan user sebelum pesan bot yang ingin di-retry
-  //       sendMessage(messageToRetry.content, messageToRetry.file);
-  //     }
-  //   },
-  //   [messages, sendMessage]
-  // );
 
   if (isLoading) return <div>Loading chat...</div>;
   if (error) return <div>{error}</div>;
@@ -191,12 +124,11 @@ function ChatContainer({ chatId, onBackToList, userId }) {
           messages={messages}
           onPreviewFile={handlePreviewFile}
           isGenerating={isGenerating}
-        // onRetry={handleRetry}
         />
       </div>
       <FileUpload onFileUpload={handleFileUpload} currentFiles={currentFiles} />
       <UserInput
-        onSendMessage={sendMessage}
+        onSendMessage={handleSendMessage}
         isGenerating={isGenerating}
         currentFiles={currentFiles}
         onRemoveFile={handleRemoveFile}

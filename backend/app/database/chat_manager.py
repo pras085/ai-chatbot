@@ -1,63 +1,31 @@
-#
-# # Mengelola logika bisnis terkait chat dan interaksi dengan database.
-#
 import logging
 from typing import List, Dict, Any, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
 from app.models.models import User, Chat, Message, ChatFile
+from uuid import UUID
+from fastapi import HTTPException
+import traceback
+from sqlalchemy import select
+import os
+
 
 logger = logging.getLogger(__name__)
 
 
 class ChatManager:
     def get_user(self, db: Session, username: str) -> Optional[User]:
-        """
-        Mengambil data pengguna berdasarkan username.
-
-        Args:
-            db (Session): Sesi database SQLAlchemy.
-            username (str): Username pengguna yang dicari.
-
-        Returns:
-            Optional[User]: Objek User jika ditemukan, None jika tidak ditemukan.
-        """
-        user = db.query(User).filter(User.username == username).first()
-        logging.info(f"Querying user: {username}, Result: {user}")
-        return user
+        return db.query(User).filter(User.username == username).first()
 
     def create_user(self, db: Session, username: str, hashed_password: str) -> User:
-        """
-        Membuat pengguna baru.
-
-        Args:
-            db (Session): Sesi database SQLAlchemy.
-            username (str): Username untuk pengguna baru.
-            hashed_password (str): Password yang sudah di-hash.
-
-        Returns:
-            User: Objek User yang baru dibuat.
-        """
         db_user = User(username=username, hashed_password=hashed_password)
         db.add(db_user)
         db.commit()
         db.refresh(db_user)
-        logging.info(f"Created user: {username}")
         return db_user
 
-    def create_chat(self, db: Session, user_id: int, title: str = "New Chat") -> Chat:
-        """
-        Membuat chat baru untuk pengguna tertentu.
-
-        Args:
-            db (Session): Sesi database SQLAlchemy.
-            user_id (int): ID pengguna yang membuat chat.
-            title (str): Judul chat (default: "New Chat").
-
-        Returns:
-            int: ID chat yang baru dibuat.
-        """
-        db_chat = Chat(user_id=user_id, title=title)
+    def create_chat(self, db: Session, user_id: int) -> Chat:
+        db_chat = Chat(user_id=user_id, title="New Chat")
         db.add(db_chat)
         db.commit()
         db.refresh(db_chat)
@@ -66,24 +34,11 @@ class ChatManager:
     def add_message(
         self,
         db: Session,
-        chat_id: str,
+        chat_id: UUID,
         content: str,
         is_user: bool,
-        file_id: Optional[int] = None,
+        file_id: Optional[UUID] = None,
     ) -> Message:
-        """
-        Menambahkan pesan baru ke dalam chat.
-
-        Args:
-            db (Session): Sesi database SQLAlchemy.
-            chat_id (int): ID chat tempat pesan akan ditambahkan.
-            content (str): Isi pesan.
-            is_user (bool): True jika pesan dari pengguna, False jika dari sistem.
-            file_id (Optional[int]): ID file yang terkait dengan pesan.
-
-        Returns:
-            Message: Objek Message yang baru ditambahkan.
-        """
         db_message = Message(
             chat_id=chat_id, content=content, is_user=is_user, file_id=file_id
         )
@@ -92,52 +47,36 @@ class ChatManager:
         db.refresh(db_message)
         return db_message
 
-    def get_chat_messages(self, db: Session, chat_id: int) -> List[Dict[str, Any]]:
-        """
-        Mengambil semua pesan untuk chat tertentu.
-
-        Args:
-            db (Session): Sesi database SQLAlchemy.
-            chat_id (int): ID chat yang pesannya akan diambil.
-
-        Returns:
-            List[Dict[str, Any]]: Daftar pesan dalam format dictionary.
-        """
+    def get_chat_messages(self, db: Session, chat_id: UUID) -> List[Dict[str, Any]]:
         try:
-            messages = (
-                db.query(Message)
-                .filter(Message.chat_id == chat_id)
+            query = (
+                select(Message, ChatFile)
+                .outerjoin(ChatFile, Message.file_id == ChatFile.id)
+                .where(Message.chat_id == chat_id)
                 .order_by(Message.created_at.asc())
-                .all()
             )
-            result = []
-            for message in messages:
-                msg_dict = {
-                    "id": message.id,
-                    "content": message.content,
-                    "is_user": message.is_user,
-                    "timestamp": message.created_at.isoformat(),
-                    "file_id": message.file_id,
-                }
-                result.append(msg_dict)
-            logger.info(f"Retrieved {len(result)} messages for chat {chat_id}")
-            return result
+            logger.info(f"query:{query}")
+
+            result = db.execute(query).fetchall()
+
+            messages = []
+            for message, chat_file in result:
+                msg_dict = message.__dict__
+                if chat_file:
+                    msg_dict["file_name"] = chat_file.file_name
+                    msg_dict["file_path"] = chat_file.file_path
+                    msg_dict["file_url"] = (
+                        f"/uploads/{os.path.basename(chat_file.file_path)}"
+                    )
+                messages.append(msg_dict)
+
+            logger.info(f"Retrieved {len(messages)} messages for chat {chat_id}")
+            return messages
         except Exception as e:
             logger.error(f"Error retrieving chat messages: {str(e)}", exc_info=True)
-            return []
+            raise  # Re-raise the exception instead of returning an empty list
 
     def get_user_chats(self, db: Session, user_id: int) -> List[Chat]:
-        """
-        Mengambil semua chat untuk pengguna tertentu.
-
-        Args:
-            db (Session): Sesi database SQLAlchemy.
-            user_id (int): ID pengguna.
-
-        Returns:
-            List[Chat]: Daftar objek Chat milik pengguna.
-        """
-
         return (
             db.query(Chat)
             .filter(Chat.user_id == user_id)
@@ -145,36 +84,46 @@ class ChatManager:
             .all()
         )
 
-    def delete_chat(self, db: Session, chat_id: str) -> bool:
+    def delete_chat(self, db: Session, chat_id: UUID, user_id: int) -> bool:
         """
         Menghapus chat berdasarkan ID.
-
         Args:
             db (Session): Sesi database SQLAlchemy.
-            chat_id (int): ID chat yang akan dihapus.
+            chat_id (UUID): ID chat yang akan dihapus.
 
         Returns:
             bool: True jika berhasil dihapus, False jika tidak.
+
+        Raises:
+            HTTPException: Jika chat tidak ditemukan atau terjadi kesalahan server.
         """
-        chat = db.query(Chat).filter(Chat.id == chat_id).first()
-        if chat:
+        try:
+            chat = (
+                db.query(Chat)
+                .filter(Chat.id == chat_id, Chat.user_id == user_id)
+                .first()
+            )
+            logger.info(f"{chat}")
+            if not chat:
+                return False
+            db.query(Message).filter(Message.chat_id == chat_id).delete(
+                synchronize_session="fetch"
+            )
+
             db.delete(chat)
             db.commit()
+            logger.info(f"Chat with id {chat_id} successfully deleted")
             return True
-        return False
+        except Exception as e:
+            logger.error(f"Error deleting chat {chat_id}: {str(e)}")
+            logger.error(traceback.format_exc())  # Ini akan mencetak traceback ke log
+            db.rollback()
+            raise HTTPException(
+                status_code=500, detail="Internal server error while deleting chat"
+            )
+            return False
 
-    def update_chat_title(self, db: Session, chat_id: str, title: str) -> bool:
-        """
-        Memperbarui judul chat.
-
-        Args:
-            db (Session): Sesi database SQLAlchemy.
-            chat_id (int): ID chat yang akan diperbarui.
-            title (str): Judul baru untuk chat.
-
-        Returns:
-            bool: True jika berhasil diperbarui, False jika tidak.
-        """
+    def update_chat_title(self, db: Session, chat_id: UUID, title: str) -> bool:
         chat = db.query(Chat).filter(Chat.id == chat_id).first()
         if chat:
             chat.title = title
@@ -182,17 +131,7 @@ class ChatManager:
             return True
         return False
 
-    def get_latest_chat_id(self, db: Session, user_id: int) -> Optional[int]:
-        """
-        Mendapatkan ID chat terbaru untuk pengguna tertentu.
-
-        Args:
-            db (Session): Sesi database SQLAlchemy.
-            user_id (int): ID pengguna.
-
-        Returns:
-            Optional[int]: ID chat terbaru, atau None jika tidak ada.
-        """
+    def get_latest_chat_id(self, db: Session, user_id: int) -> Optional[UUID]:
         latest_chat = (
             db.query(Chat)
             .filter(Chat.user_id == user_id)
@@ -202,20 +141,8 @@ class ChatManager:
         return latest_chat.id if latest_chat else None
 
     def add_file_to_chat(
-        self, db: Session, chat_id: str, file_name: str, file_path: str
-    ) -> int:
-        """
-        Menambahkan informasi file ke database untuk chat tertentu.
-
-        Args:
-            db (Session): Sesi database SQLAlchemy.
-            chat_id (int): ID chat tempat file ditambahkan.
-            file_name (str): Nama file yang diupload.
-            file_path (str): Path tempat file disimpan.
-
-        Returns:
-            int: ID dari file yang baru ditambahkan.
-        """
+        self, db: Session, chat_id: UUID, file_name: str, file_path: str
+    ) -> UUID:
         try:
             chat_file = ChatFile(
                 chat_id=chat_id, file_name=file_name, file_path=file_path

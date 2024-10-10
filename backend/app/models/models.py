@@ -8,11 +8,20 @@ from sqlalchemy import (
     ForeignKey,
     Index,
 )
-from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import relationship
+from sqlalchemy.dialects.postgresql import UUID as pgUUID
+from sqlalchemy.orm import relationship, declarative_base
 from sqlalchemy.sql import func
 import uuid
 from app.database import Base
+
+
+class BaseModel(Base):
+    __abstract__ = True
+
+    def to_dict(self):
+        return {
+            column.name: getattr(self, column.name) for column in self.__table__.columns
+        }
 
 
 class User(Base):
@@ -27,7 +36,7 @@ class User(Base):
 
 class Chat(Base):
     __tablename__ = "chats"
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    id = Column(pgUUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
     title = Column(String, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
@@ -44,26 +53,23 @@ class Chat(Base):
         Index("idx_chats_created_at", "created_at"),
     )
 
+
 class Message(Base):
     __tablename__ = "messages"
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    id = Column(pgUUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
     content = Column(Text, nullable=False)
     is_user = Column(Boolean, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    chat_id = Column(UUID(as_uuid=True), ForeignKey("chats.id"), nullable=False)
-    file_id = Column(UUID(as_uuid=True), ForeignKey("chat_files.id"), nullable=True)
+    chat_id = Column(pgUUID(as_uuid=True), ForeignKey("chats.id"), nullable=False)
+    file_id = Column(pgUUID(as_uuid=True), ForeignKey("chat_files.id"), nullable=True)
     chat = relationship("Chat", back_populates="messages")
     file = relationship("ChatFile", back_populates="messages")
-    __table_args__ = (
-        Index("idx_messages_chat_id", "chat_id"),
-        Index("idx_messages_created_at", "created_at"),
-        Index("idx_messages_file_id", "file_id"),  
-    )
+
 
 class ChatFile(Base):
     __tablename__ = "chat_files"
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
-    chat_id = Column(UUID(as_uuid=True), ForeignKey("chats.id"), nullable=False)
+    id = Column(pgUUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    chat_id = Column(pgUUID(as_uuid=True), ForeignKey("chats.id"), nullable=False)
     file_name = Column(String, nullable=False)
     file_path = Column(String, nullable=False)
     uploaded_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -77,7 +83,7 @@ class ChatFile(Base):
 
 class KnowledgeBase(Base):
     __tablename__ = "knowledge_base"
-    id = Column(String, primary_key=True, default=uuid.uuid4, index=True)
+    id = Column(pgUUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
     question = Column(Text, nullable=False)
     answer = Column(Text, nullable=False)
     image_path = Column(String, nullable=True)

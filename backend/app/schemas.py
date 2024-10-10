@@ -1,6 +1,7 @@
-from pydantic import BaseModel, UUID4, Field
+from pydantic import BaseModel, Field
 from datetime import datetime
 from typing import Optional
+from uuid import UUID
 
 
 class UserBase(BaseModel):
@@ -21,7 +22,7 @@ class User(UserBase):
 
 
 class ChatBase(BaseModel):
-    title: str
+    title: str = "New Chat"
 
 
 class ChatCreate(ChatBase):
@@ -31,11 +32,12 @@ class ChatCreate(ChatBase):
         extra = "allow"
 
 
-class Chat(ChatBase):
-    id: UUID4
+class Chat(BaseModel):
+    id: UUID
     user_id: int
+    title: str
     created_at: datetime
     updated_at: Optional[datetime] = None
 
     class Config:
-        from_orm = True
+        from_attributes = True

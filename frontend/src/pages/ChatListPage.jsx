@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import ChatList from "../components/ChatList";
-import { getUserChats } from "../services/api";
+import { getUserChats, deleteChat } from "../services/api";
 import useUser from "../hooks/useUser";
 
 function ChatListPage() {
@@ -41,6 +41,22 @@ function ChatListPage() {
     navigate(`/chat/${newChat.id}`);
   }, [navigate]);
 
+  const handleDeleteChat = useCallback(async (deletedChatId) => {
+    try {
+      await deleteChat(deletedChatId);  // Panggil API deleteChat
+      // Update local state
+      setChats((prevChats) => prevChats.filter(chat => chat.chat_id !== deletedChatId));
+      // Opsional: Fetch fresh data from server
+      if (user && user.id) {
+        fetchChats(user.id);
+      }
+    } catch (error) {
+      console.error("Failed to delete chat:", error);
+      alert("Failed to delete chat. Please try again.");
+    }
+  }, [user, fetchChats]);
+
+
   if (userLoading) return <div>Loading user data...</div>;
   if (!user) return <div>Please log in to view chats.</div>;
   if (isLoading) return <div>Loading chats...</div>;
@@ -52,6 +68,7 @@ function ChatListPage() {
         chats={chats}
         onSelectChat={handleSelectChat}
         onNewChat={handleNewChat}
+        onDeleteChat={handleDeleteChat}
         userId={user.id}
       />
     </div>

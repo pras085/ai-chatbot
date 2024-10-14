@@ -1,4 +1,4 @@
-import { React, useState } from "react";
+import React, { useState } from "react";
 import "../styles/ChatListPage.css";
 import { createNewChat } from "../services/api";
 
@@ -27,8 +27,7 @@ const ChatList = ({ chats = [], onSelectChat, onNewChat, onDeleteChat, userId })
   const handleDeleteChat = async (chatId) => {
     if (window.confirm("Are you sure you want to delete this chat?")) {
       try {
-        await onDeleteChat(chatId);  // Panggil fungsi dari prop, bukan API langsung
-        // Tidak perlu alert di sini, karena penanganan sudah dilakukan di ChatListPage
+        await onDeleteChat(chatId);
       } catch (error) {
         console.error(`Error deleting chat: ${chatId}:`, error);
         alert(`Error deleting chat: ${error.message}`);
@@ -39,30 +38,20 @@ const ChatList = ({ chats = [], onSelectChat, onNewChat, onDeleteChat, userId })
   const getAvatarText = (title) => {
     return title && typeof title === "string" ? title[0].toUpperCase() : "n";
   };
-  // Fungsi untuk menampilkan context menu pada klik kanan
-  // const handleRightClick = (event, chatId) => {
-  //   event.preventDefault(); // Mencegah context menu browser default
-  //   setContextMenu({
-  //     mouseX: event.clientX,
-  //     mouseY: event.clientY,
-  //     chatId,
-  //   });
-  // };
 
   return (
     <div className="chat-list-container">
-      <button
-        className="create-chat-btn"
-        onClick={handleCreateNewChat}
-        disabled={isCreatingChat}
-      >
-        {isCreatingChat ? "Creating..." : "Create New Chat"}
-      </button>
-      {chats.length === 0 ? (
-        <div className="no-chats-message">
-          No chats available. Create a new chat to get started!
-        </div>
-      ) : (
+      <div className="chat-list-header">
+        <button
+          className="create-chat-btn"
+          onClick={handleCreateNewChat}
+          disabled={isCreatingChat}
+        >
+          {isCreatingChat ? "Creating..." : "Create New Chat"}
+        </button>
+      </div>
+
+      <div className="chat-list-content">
         <ul className="chat-list">
           {chats.map((chat) => (
             <li
@@ -93,25 +82,12 @@ const ChatList = ({ chats = [], onSelectChat, onNewChat, onDeleteChat, userId })
             </li>
           ))}
         </ul>
-      )}
-      {/* {contextMenu && (
-        <div
-          className="context-menu"
-          style={{
-            top: contextMenu.mouseY,
-            left: contextMenu.mouseX,
-            position: "absolute",
-            backgroundColor: "white",
-            boxShadow: "0px 4px 8px rgba(0, 0, 0, 0.2)",
-          }}
-        >
-          <ul>
-            <li onClick={() => handleDeleteChat(contextMenu.chatId)}>
-              Hapus Chat
-            </li>
-          </ul>
+
+        <div className="product-knowledge-panel">
+          <h3>Product Information</h3>
         </div>
-      )} */}
+
+      </div>
     </div>
   );
 };

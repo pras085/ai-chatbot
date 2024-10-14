@@ -83,9 +83,11 @@ class ChatFile(Base):
 
 class KnowledgeBase(Base):
     __tablename__ = "knowledge_base"
-    id = Column(pgUUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
-    question = Column(Text, nullable=False)
-    answer = Column(Text, nullable=False)
-    image_path = Column(String, nullable=True)
+    id = Column(pgUUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    question = Column(String, nullable=False)
+    answer = Column(String, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    def __repr__(self):
+        return f"<ProductKnowledge(id={self.id}, question={self.question})>"

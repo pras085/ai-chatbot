@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.routes import api
 from dotenv import load_dotenv
 from fastapi.staticfiles import StaticFiles
-from app.database.database import Base, engine
+from app.database.database import Base, engine, create_tables
 
 # Konfigurasi logging diletakkan di bagian paling atas
 logging.basicConfig(
@@ -36,6 +36,8 @@ app.add_middleware(
 
 # Tambahkan router untuk endpoint
 app.include_router(api)
+
+create_tables()
 
 # Jalankan aplikasi dengan Uvicorn
 if __name__ == "__main__":

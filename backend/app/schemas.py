@@ -41,3 +41,21 @@ class Chat(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class KnowledgeBaseBase(BaseModel):
+    title: str
+    content: str
+
+
+class KnowledgeBaseCreate(KnowledgeBaseBase):
+    pass
+
+
+class KnowledgeBase(KnowledgeBaseBase):
+    id: UUID
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True

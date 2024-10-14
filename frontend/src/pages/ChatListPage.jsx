@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import ChatList from "../components/ChatList";
 import { getUserChats, deleteChat } from "../services/api";
 import useUser from "../hooks/useUser";
+import ContextUpload from "../components/ContextInput";
+
 
 function ChatListPage() {
   const [chats, setChats] = useState([]);
@@ -10,6 +12,8 @@ function ChatListPage() {
   const [error, setError] = useState(null);
   const navigate = useNavigate();
   const { user, loading: userLoading } = useUser();
+  const [productKnowledge, setProductKnowledge] = useState([]);
+  const [context, setContext] = useState(null);
 
   const fetchChats = useCallback(async (uid) => {
     if (!uid) return;
@@ -56,6 +60,11 @@ function ChatListPage() {
     }
   }, [user, fetchChats]);
 
+  const handleContextUpdate = (newContext) => {
+    setContext(newContext);
+  };
+
+
 
   if (userLoading) return <div>Loading user data...</div>;
   if (!user) return <div>Please log in to view chats.</div>;
@@ -64,6 +73,8 @@ function ChatListPage() {
 
   return (
     <div className="chat-list-page">
+      <ContextUpload onContextUpdate={handleContextUpdate} />
+
       <ChatList
         chats={chats}
         onSelectChat={handleSelectChat}

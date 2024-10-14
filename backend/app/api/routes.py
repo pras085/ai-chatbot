@@ -187,21 +187,6 @@ async def create_new_chat(user_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail="An unexpected error occurred")
 
 
-@api.post("/knowledge_base/add")
-async def add_knowledge_base_item(
-    question: str = Form(...),
-    answer: str = Form(...),
-    image: UploadFile = File(None),
-    db: Session = Depends(get_db),
-):
-    try:
-        item = await chat_service.add_knowledge_base_item(db, question, answer, image)
-        return {"message": "Item added successfully", "item": item}
-    except Exception as e:
-        logger.error(f"Error in add_knowledge_base_item: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
-
-
 @api.get("/uploads/{file_path:path}")
 async def get_file(file_path: str, current_user: User = Depends(get_current_user)):
     try:
@@ -218,3 +203,55 @@ async def get_file(file_path: str, current_user: User = Depends(get_current_user
     # return FileResponse(
     #     file_path, media_type="application/octet-stream", filename=filename
     # )
+
+
+@api.get("/product-knowledge")
+async def get_product_knowledge(db: Session = Depends(get_db)):
+    try:
+        items = kb.get_all_items(db)
+        return {"items": items}
+    except Exception as e:
+        logger.error(f"Error getting product knowledge: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@api.post("/product-knowledge")
+async def add_product_knowledge(
+    question: str = Form(...), answer: str = Form(...), db: Session = Depends(get_db)
+):
+    try:
+        new_item = kb.add_item(db, question, answer)
+        return {"message": "Item added successfully", "item": new_item}
+    except Exception as e:
+        logger.error(f"Error adding product knowledge: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@api.get("/product-knowledge/search")
+async def search_product_knowledge(query: str, db: Session = Depends(get_db)):
+    try:
+        results = kb.search_items(db, query)
+        return {"items": results}
+    except Exception as e:
+        logger.error(f"Error searching product knowledge: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@api.post("/upload-context")
+async def upload_context(
+    text: str = Form(None), file: UploadFile = File(None), db: Session = Depends(get_db)
+):
+    try:
+        context = {}
+        if text:
+            context["text"] = text
+        if file:
+            file_path = await save_uploaded_file(file)
+            context["file"] = {"name": file.filename, "path": file_path}
+
+        # Simpan konteks ke database atau file sistem
+        # Untuk sementara, kita hanya mengembalikannya
+        return {"message": "Context uploaded successfully", "context": context}
+    except Exception as e:
+        logger.error(f"Error uploading context: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")

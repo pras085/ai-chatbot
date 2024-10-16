@@ -2,37 +2,27 @@
 # # Berisi definisi endpoint API dan penanganan request/response.
 #
 
-from fastapi import (
-    APIRouter,
-    HTTPException,
-    Depends,
-    File,
-    Form,
-    UploadFile,
-    status,
-    Body,
-)
-from fastapi.responses import StreamingResponse, FileResponse, JSONResponse
+from fastapi import APIRouter, HTTPException, Depends, File, Form, UploadFile, status
+from fastapi.responses import FileResponse, JSONResponse
 from sqlalchemy.orm import Session
 from app.services import chat_service
-from app.database import get_db, KnowledgeBase
+from app.database import get_db
+from app.database.knowledge_base import knowledge_manager
 from app import schemas
 from app.utils.file_utils import save_uploaded_file
 from typing import List, Dict, Any
 import logging
 import os
 from fastapi.encoders import jsonable_encoder
-from config import Config
-from .auth import create_access_token, verify_token, get_password_hash
+from .auth import create_access_token, verify_token
 from fastapi.security import OAuth2PasswordRequestForm
-from datetime import datetime
 from sqlalchemy.exc import SQLAlchemyError
 from app.utils.feature_utils import Feature
 from uuid import UUID
 from app.models.models import User, ChatFile
 
+
 api = APIRouter()
-kb = KnowledgeBase()
 
 logger = logging.getLogger(__name__)
 
@@ -96,12 +86,14 @@ async def delete_chat_endpoint(
 async def get_user_chats(
     user_id: int, db: Session = Depends(get_db)
 ) -> List[Dict[str, Any]]:
+    logger.info(f"Attempting to fetch chats for user_id: {user_id}")
     try:
         chats = await chat_service.get_user_chats(db, user_id)
+        logger.info(f"Successfully fetched {len(chats)} chats for user_id: {user_id}")
         return chats
     except HTTPException as he:
+        logger.error(f"HTTP exception in get_user_chats: {str(he)}")
         raise he
-
     except Exception as e:
         logger.error(f"Error in get_user_chats: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
@@ -110,17 +102,38 @@ async def get_user_chats(
 @api.post("/chat/send")
 async def send_chat_message(
     message: str = Form(...),
-    file: UploadFile = File(None),
+    files: List[UploadFile] = File(None),  # Banyak file
     user_id: int = Form(...),
     chat_id: UUID = Form(...),
     db: Session = Depends(get_db),
     feature: Feature = Feature.GENERAL,
 ):
     try:
-        file_path = await save_uploaded_file(file) if file else None
+        file_contents = []
+        if files:
+            for file in files:
+                content = await file.read()
+                file_contents.append(
+                    {
+                        "name": file.filename,
+                        "content": content.decode("utf-8", errors="ignore"),
+                    }
+                )
+                # Simpan file jika diperlukan
+                # file_path = await save_uploaded_file(file)
+                # chat_manager.add_file_to_chat(db, chat_id, file.filename, file_path)
+
         return await chat_service.process_chat_message(
-            db, user_id, chat_id, message, feature, file_path
+            db,
+            user_id,
+            chat_id,
+            message,
+            feature,
+            file_contents,
         )
+    except ValueError as e:
+        logger.error(f"File upload error: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"File upload error: {str(e)}")
     except Exception as e:
         logger.error(f"Error in send_chat_message: {str(e)}")
         raise HTTPException(status_code=500, detail="Error processing chat message")
@@ -205,53 +218,101 @@ async def get_file(file_path: str, current_user: User = Depends(get_current_user
     # )
 
 
-@api.get("/product-knowledge")
-async def get_product_knowledge(db: Session = Depends(get_db)):
-    try:
-        items = kb.get_all_items(db)
-        return {"items": items}
-    except Exception as e:
-        logger.error(f"Error getting product knowledge: {str(e)}")
-        raise HTTPException(status_code=500, detail="Internal server error")
-
-
-@api.post("/product-knowledge")
-async def add_product_knowledge(
-    question: str = Form(...), answer: str = Form(...), db: Session = Depends(get_db)
-):
-    try:
-        new_item = kb.add_item(db, question, answer)
-        return {"message": "Item added successfully", "item": new_item}
-    except Exception as e:
-        logger.error(f"Error adding product knowledge: {str(e)}")
-        raise HTTPException(status_code=500, detail="Internal server error")
-
-
-@api.get("/product-knowledge/search")
-async def search_product_knowledge(query: str, db: Session = Depends(get_db)):
-    try:
-        results = kb.search_items(db, query)
-        return {"items": results}
-    except Exception as e:
-        logger.error(f"Error searching product knowledge: {str(e)}")
-        raise HTTPException(status_code=500, detail="Internal server error")
-
-
-@api.post("/upload-context")
+@api.post("/context")
 async def upload_context(
-    text: str = Form(None), file: UploadFile = File(None), db: Session = Depends(get_db)
+    text: str = Form(None),
+    file: UploadFile = File(None),
+    current_user: str = Depends(verify_token),
+    db: Session = Depends(get_db),
 ):
     try:
-        context = {}
-        if text:
-            context["text"] = text
-        if file:
-            file_path = await save_uploaded_file(file)
-            context["file"] = {"name": file.filename, "path": file_path}
+        user = await chat_service.get_user_by_username(db, current_user)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
 
-        # Simpan konteks ke database atau file sistem
-        # Untuk sementara, kita hanya mengembalikannya
-        return {"message": "Context uploaded successfully", "context": context}
+        if text:
+            context = knowledge_manager.add_context(db, user.id, text, "text")
+        elif file:
+            file_path = await save_uploaded_file(file)
+            context = knowledge_manager.add_context(
+                db, user.id, file.filename, "file", file_path
+            )
+        else:
+            raise HTTPException(
+                status_code=400, detail="Either text or file must be provided"
+            )
+
+        return {
+            "message": "Context uploaded successfully",
+            "context_id": str(context.id),
+        }
     except Exception as e:
         logger.error(f"Error uploading context: {str(e)}")
-        raise HTTPException(status_code=500, detail="Internal server error")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api.get("/context")
+async def get_context(
+    current_user: str = Depends(verify_token), db: Session = Depends(get_db)
+):
+    try:
+        user = await chat_service.get_user_by_username(db, current_user)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        context = knowledge_manager.get_latest_context(db, user.id)
+        if not context:
+            return {"message": "No context found"}
+        return {
+            "id": str(context.id),
+            "content": context.content,
+            "content_type": context.content_type,
+            "file_path": context.file_path,
+            "updated_at": context.updated_at,
+        }
+    except Exception as e:
+        logger.error(f"Error getting context: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api.get("/contexts")
+async def get_all_contexts(
+    current_user: User = Depends(verify_token), db: Session = Depends(get_db)
+):
+    try:
+        user = await chat_service.get_user_by_username(db, current_user)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        contexts = knowledge_manager.get_user_contexts(db, user.id)
+        return [
+            {
+                "id": str(c.id),
+                "content": c.content,
+                "content_type": c.content_type,
+                "updated_at": c.updated_at,
+            }
+            for c in contexts
+        ]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api.delete("/context/{context_id}")
+async def delete_context(
+    context_id: UUID,
+    current_user: User = Depends(verify_token),
+    db: Session = Depends(get_db),
+):
+    try:
+        user = await chat_service.get_user_by_username(db, current_user)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        success = knowledge_manager.delete_context(db, context_id, user.id)
+        if success:
+            return {"message": "Context deleted successfully"}
+        else:
+            raise HTTPException(status_code=404, detail="Context not found")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

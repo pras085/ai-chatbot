@@ -32,14 +32,21 @@ async def save_uploaded_file(file: UploadFile) -> str:
     Raises:
         ValueError: Jika tipe file tidak diizinkan.
     """
+
     if not os.path.exists(UPLOAD_FOLDER):
         os.makedirs(UPLOAD_FOLDER)
 
     # if not is_allowed_file(file.filename):
     #     raise ValueError("File type not allowed")
 
+    # Tentukan path file
     file_path = os.path.join(UPLOAD_FOLDER, file.filename)
-    with open(file_path, "wb") as buffer:
-        buffer.write(await file.read())
-    logging.info(f"File saved to: {file_path}")
+
+    try:
+        with open(file_path, "wb") as buffer:
+            buffer.write(await file.read())
+        logging.info(f"File saved to: {file_path}")
+    except Exception as e:
+        logging.error(f"Failed to save file {file.filename}. Error: {e}")
+        raise
     return file_path

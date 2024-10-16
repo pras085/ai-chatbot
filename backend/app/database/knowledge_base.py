@@ -1,8 +1,9 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
-from app.models.models import KnowledgeBase
-from typing import List, Dict, Any
+from app.models.models import KnowledgeBase, Context
+from typing import List, Dict, Any, Optional
 import logging
+import uuid
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +44,78 @@ class KnowledgeManager:
             return [item.__dict__ for item in items]
         except Exception as e:
             logger.error(f"Error searching product knowledge items: {str(e)}")
+            raise
+
+    def add_context(
+        self,
+        db: Session,
+        user_id: int,
+        content: str,
+        content_type: str,
+        file_path: str = None,
+    ):
+        try:
+            logger.info(f"Adding context for user {user_id}: {content_type}")
+            new_context = Context(
+                user_id=user_id,
+                content=content,
+                content_type=content_type,
+                file_path=file_path,
+            )
+            db.add(new_context)
+            db.commit()
+            db.refresh(new_context)
+            logger.info(f"Context added successfully: {new_context.id}")
+            return new_context
+        except Exception as e:
+            logger.error(f"Error adding context: {str(e)}")
+            db.rollback()
+            raise
+
+    def get_user_contexts(self, db: Session, user_id: int) -> List[Context]:
+        try:
+            return (
+                db.query(Context)
+                .filter(Context.user_id == user_id)
+                .order_by(Context.updated_at.desc())
+                .all()
+            )
+        except Exception as e:
+            logger.error(f"Error getting user contexts: {str(e)}")
+            raise
+
+    def get_latest_context(self, db: Session, user_id: int) -> Optional[Context]:
+        try:
+            logger.info(f"Getting latest context for user_id: {user_id}")
+            context = (
+                db.query(Context)
+                .filter(Context.user_id == user_id)
+                .order_by(Context.updated_at.desc())
+                .first()
+            )
+            if not context:  # Jika tidak ada context
+                logger.info(f"No context found for user {user_id}")
+                return None  # Atau berikan nilai default sesuai keperluan
+            return context
+        except Exception as e:
+            logger.error(f"Error getting latest context: {str(e)}")
+            raise
+
+    def delete_context(self, db: Session, context_id: uuid.UUID, user_id: int) -> bool:
+        try:
+            context = (
+                db.query(Context)
+                .filter(Context.id == context_id, Context.user_id == user_id)
+                .first()
+            )
+            if context:
+                db.delete(context)
+                db.commit()
+                return True
+            return False
+        except Exception as e:
+            logger.error(f"Error deleting context: {str(e)}")
+            db.rollback()
             raise
 
 

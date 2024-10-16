@@ -1,56 +1,36 @@
 import React, { useState } from 'react';
-// import { uploadContext } from '../services/api';
 
-const ContextUpload = ({ onContextUpdate }) => {
+const ContextInput = ({ onContextUpdate }) => {
     const [text, setText] = useState('');
     const [file, setFile] = useState(null);
-    const [isUploading, setIsUploading] = useState(false);
 
-    const handleTextChange = (e) => {
-        setText(e.target.value);
-    };
-
-    const handleFileChange = (e) => {
-        setFile(e.target.files[0]);
-    };
-
-    const handleSubmit = async (e) => {
+    const handleSubmit = (e) => {
         e.preventDefault();
-        setIsUploading(true);
+        const formData = new FormData();
+        if (text) formData.append('text', text);
+        if (file) formData.append('file', file);
 
-        try {
-            const formData = new FormData();
-            if (text) formData.append('text', text);
-            if (file) formData.append('file', file);
-
-            // const result = await uploadContext(formData);
-            // onContextUpdate(result);
-            setText('');
-            setFile(null);
-        } catch (error) {
-            console.error('Error uploading context:', error);
-            alert('Failed to upload context. Please try again.');
-        } finally {
-            setIsUploading(false);
-        }
+        onContextUpdate(formData);
+        setText('');
+        setFile(null);
     };
 
     return (
-        <div className="context-upload">
-            <h3>Add Context (Optional)</h3>
-            <form onSubmit={handleSubmit}>
-                <textarea
-                    value={text}
-                    onChange={handleTextChange}
-                    placeholder="Enter additional context here..."
-                />
-                <input type="file" onChange={handleFileChange} />
-                <button type="submit" disabled={isUploading}>
-                    {isUploading ? 'Uploading...' : 'Upload Context'}
-                </button>
-            </form>
-        </div>
+        <form onSubmit={handleSubmit} className="context-input-form">
+            <textarea
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                placeholder="Enter additional context..."
+                className="context-textarea"
+            />
+            <input
+                type="file"
+                onChange={(e) => setFile(e.target.files[0])}
+                className="context-file-input"
+            />
+            <button type="submit" className="context-submit-button">Update Context</button>
+        </form>
     );
 };
 
-export default ContextUpload;
+export default ContextInput;

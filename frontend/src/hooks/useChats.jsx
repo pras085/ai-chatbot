@@ -7,6 +7,7 @@ export const useChats = (userId) => {
   const [error, setError] = useState(null);
 
   const fetchChats = useCallback(async () => {
+    if (!userId) return;
     setIsLoading(true);
     setError(null);
     try {
@@ -19,5 +20,6 @@ export const useChats = (userId) => {
     }
   }, [userId]);
 
-  return { chats, isLoading, error, fetchChats };
+  return { chats, isLoading, error, fetchChats, setChats };
 };
+export default useChats;

@@ -1,0 +1,117 @@
+.home-container {
+    max-width: 100%;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.home-title {
+    font-size: 2rem;
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 2rem;
+}
+
+.logout-button {
+    background-color: white;
+    color: #007bff;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 5px;
+    justify-content: space-between;
+    cursor: pointer;
+    width: 120px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 16px;
+    transition: background-color 0.1s;
+}
+
+.logout-button:hover {
+    background-color: #0056b3;
+    color: white;
+}
+
+.feature-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+}
+
+.feature-card {
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: box-shadow 0.3s ease;
+    display: flex;
+    flex-direction: column;
+}
+
+.feature-card:hover {
+    box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+}
+
+.feature-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    height: 40px;
+}
+
+.feature-icon {
+    color: #007bff;
+    flex-shrink: 0;
+    /* Mencegah ikon dari menyusut */
+}
+
+.feature-title {
+    font-size: 1.25rem;
+    margin: 0;
+    line-height: 1.2;
+    overflow: hidden;
+    display: -webkit-box;
+    line-clamp: 2;
+    -webkit-line-clamp: 2;
+    /* Membatasi jumlah baris */
+    -webkit-box-orient: vertical;
+    color: #333;
+}
+
+.feature-content {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.feature-description {
+    margin-bottom: 1rem;
+    flex-grow: 1;
+    color: #333;
+    /* Memastikan deskripsi mengisi ruang yang tersedia */
+}
+
+.feature-button {
+    width: 100%;
+    padding: 0.5rem 1rem;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    margin-top: auto;
+    /* Mendorong tombol ke bagian bawah */
+}
+
+.feature-button:hover {
+    background-color: #0056b3;
+}

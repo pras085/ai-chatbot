@@ -6,50 +6,31 @@ export function useUser() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // useEffect(() => {
-  //   const fetchUser = async () => {
-  //     try {
-  //       const response = await apiRequest("/user");
-  //       if (response.ok) {
-  //         const userData = await response.json();
-  //         setUser(userData);
-  //         setError(null);
-  //       } else {
-  //         throw Error(response.error);
-  //       }
-  //     } catch (error) {
-  //       console.error("Failed to fetch user data:", error);
-  //       setError(error.message);
-  //       // Hapus token jika ada masalah autentikasi
-  //       if (error.message === "Authentication failed") {
-  //         localStorage.removeItem("token");
-  //       }
-  //     } finally {
-  //       setLoading(false);
-  //     }
-  //   };
-
-  //   if (localStorage.getItem("token")) {
-  //     fetchUser();
-  //   } else {
-  //     setLoading(false);
-  //   }
-  // }, []);
-
-  // return { user, loading, error };
-
   useEffect(() => {
-    getUser()
-      .then((userData) => {
+    const fetchUser = async () => {
+      try {
+        const userData = await getUser();
         setUser(userData);
+      } catch (err) {
+        console.error("Failed to fetch user data:", err);
+        setError(err.message);
+        // Hapus token jika ada masalah autentikasi
+        if (err.message === "Unauthorized") {
+          localStorage.removeItem("token");
+        }
+      } finally {
         setLoading(false);
-      })
-      .catch((err) => {
-        setError(err);
-        setLoading(false);
-      });
+      }
+    };
+
+    if (localStorage.getItem("token")) {
+      fetchUser();
+    } else {
+      setLoading(false);
+    }
   }, []);
 
   return { user, loading, error };
 }
+
 export default useUser;

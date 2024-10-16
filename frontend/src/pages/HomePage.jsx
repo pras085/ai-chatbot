@@ -8,42 +8,46 @@ import {
   faHeadset,
   faSignOutAlt,
 } from "@fortawesome/free-solid-svg-icons";
-import "../styles/HomePage.css"; // Pastikan file CSS ini ada
+import "../styles/HomePage.css";
 import { ReactComponent as MuatmuatIcon } from "../assets/logo-muatmuat.svg";
 import { apiRequest } from "../services/api";
+import { useFeature } from "../contexts/FeatureContext";
 
-const HomePage = ({ userId }) => {
+const HomePage = () => {
   const navigate = useNavigate();
-  const token = localStorage.getItem("token");
-
-  console.log("token", token);
+  const { setActiveFeature } = useFeature();
 
   const features = [
     {
       title: "General AI Assistant",
       description: "AI yang mampu menjawab berbagai topik termasuk coding.",
-      icon: faBrain,
-      route: "/chats",
+      icon: <FontAwesomeIcon icon={faBrain} size="2x" className="feature-icon" />,
+      featureType: "GENERAL",
     },
     {
       title: "Standard Code Checking",
       description: "Menilai kesesuaian code dengan standar perusahaan.",
-      icon: faCheck,
-      route: "/code-check",
+      icon: <FontAwesomeIcon icon={faCheck} size="2x" className="feature-icon" />,
+      featureType: "CODE_CHECK",
     },
     {
       title: "Code Helper",
       description: "Menambahkan dokumentasi dan komentar pada code project.",
-      icon: faCode,
-      route: "/code-helper",
+      icon: <FontAwesomeIcon icon={faCode} size="2x" className="feature-icon" />,
+      featureType: "CODE_HELPER",
     },
     {
       title: "Customer Service Chatbot",
       description: "Menjawab pertanyaan terkait produk perusahaan.",
-      icon: faHeadset,
-      route: "/cs-chatbot",
+      icon: <FontAwesomeIcon icon={faHeadset} size="2x" className="feature-icon" />,
+      featureType: "CS_CHATBOT",
     },
   ];
+
+  const handleFeatureClick = (featureType) => {
+    setActiveFeature(featureType);
+    navigate("/chats");  // Arahkan ke halaman daftar chat
+  };
 
   const handleLogout = async () => {
     try {
@@ -52,7 +56,6 @@ const HomePage = ({ userId }) => {
       navigate("/login");
     } catch (error) {
       console.error("Logout failed:", error);
-      // Tetap hapus token dan arahkan ke login meskipun terjadi error
       localStorage.removeItem("token");
       navigate("/login");
     }
@@ -70,22 +73,16 @@ const HomePage = ({ userId }) => {
         {features.map((feature, index) => (
           <div key={index} className="feature-card">
             <div className="feature-header">
-              <FontAwesomeIcon
-                icon={feature.icon}
-                size="2x"
-                className="feature-icon"
-              />
+              {feature.icon}
               <h2 className="feature-title">{feature.title}</h2>
             </div>
             <div className="feature-content">
               <p className="feature-description">{feature.description}</p>
               <button
-                onClick={() => navigate(feature.route)}
+                onClick={() => handleFeatureClick(feature.featureType)}
                 className="feature-button"
               >
-                {feature.title === "General AI Assistant"
-                  ? "Start Chat"
-                  : "Access Feature"}
+                Start Chat
               </button>
             </div>
           </div>

@@ -51,8 +51,8 @@ function ChatContainer({ chatId, onBackToList, userId }) {
     }
   };
 
-  const handleSendMessage = async (message, file) => {
-    if (!message.trim() && !file) return;
+  const handleSendMessage = async (message) => {
+    if (!message.trim() && currentFiles.length === 0) return;
 
     setIsGenerating(true);
     const newMessage = { content: message, type: "user-message" };
@@ -65,7 +65,7 @@ function ChatContainer({ chatId, onBackToList, userId }) {
         userId,
         chatId,
         message,
-        file,
+        currentFiles,
         abortControllerRef.current.signal,
         (chunk) => {
           setMessages(prevMessages => {

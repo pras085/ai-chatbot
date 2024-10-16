@@ -41,6 +41,7 @@ export const allowedExtensions = [
   // Codingan
   "txt",
   "js",
+  "jsx",
   "css",
   "html",
   "json",

@@ -33,6 +33,8 @@ class User(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     chats = relationship("Chat", back_populates="user", cascade="all, delete-orphan")
 
+    contexts = relationship("Context", back_populates="user")
+
 
 class Chat(Base):
     __tablename__ = "chats"
@@ -83,11 +85,29 @@ class ChatFile(Base):
 
 class KnowledgeBase(Base):
     __tablename__ = "knowledge_base"
+
+    id = Column(Integer, primary_key=True, index=True)
+    question = Column(Text, nullable=False)
+    answer = Column(Text, nullable=False)
+
+    def __repr__(self):
+        return f"<KnowledgeBase(id={self.id}, question={self.question[:30]}...)>"
+
+
+class Context(Base):
+    __tablename__ = "contexts"
+
     id = Column(pgUUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    question = Column(String, nullable=False)
-    answer = Column(String, nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    content = Column(Text, nullable=False)
+    content_type = Column(String, nullable=False)  # 'text' atau 'file'
+    file_path = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
-    def __repr__(self):
-        return f"<ProductKnowledge(id={self.id}, question={self.question})>"
+    user = relationship("User", back_populates="contexts")
+
+
+User.contexts = relationship(
+    "Context", order_by=Context.created_at, back_populates="user"
+)

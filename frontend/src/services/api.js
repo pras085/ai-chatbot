@@ -13,13 +13,7 @@ const API_BASE_URL = "http://localhost:8000"; // Sesuaikan dengan URL backend An
  * @throws {Error} Jika terjadi kesalahan dalam request atau otentikasi.
  */
 export const apiRequest = async (endpoint, options = {}) => {
-  const {
-    method = "GET",
-    headers = {},
-    body,
-    requiresAuth = true,
-    ...otherOptions
-  } = options;
+  const { method = "GET", headers = {}, body, requiresAuth = true, ...otherOptions } = options;
 
   const requestHeaders = new Headers(headers);
 
@@ -90,7 +84,7 @@ export const sendChatMessage = async (
   userId,
   chatId,
   message,
-  file,
+  files,
   signal,
   onChunk,
   onDone,
@@ -100,9 +94,12 @@ export const sendChatMessage = async (
   formData.append("message", message);
   formData.append("chat_id", chatId);
   formData.append("user_id", userId);
-  if (file) {
-    formData.append("file", file);
+  if (files && files.length > 0) {
+    for (let i = 0; i < files.length; i++) {
+      formData.append(`files`, files[i]);
+    }
   }
+  console.log("FormData contents:", [...formData.entries()]);
 
   try {
     const response = await fetch(`${API_BASE_URL}/chat/send`, {
@@ -238,4 +235,78 @@ export const deleteChat = async (chatId) => {
     console.error("Error deleting chat:", error);
     throw error;
   }
+};
+
+export const getContext = async () => {
+  const response = await apiRequest("/contexts");
+  if (!response.ok) {
+    throw new Error("Failed to get context");
+  }
+
+  return await response.json();
+};
+
+/**
+ * Menghapus context tertentuu untuk pengguna tertentu.
+ *
+ * @param {string} contextID - ID context
+ */ export const deleteContext = async (contextID) => {
+  try {
+    const response = await apiRequest(`/context/${contextID}`, {
+      method: "DELETE",
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || "Failed to delete context");
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error deleting context:", error);
+    throw error;
+  }
+};
+
+export const uploadContext = async (formData) => {
+  try {
+    console.log("Uploading context with formData:", Object.fromEntries(formData));
+    const response = await apiRequest("/context", {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error("Server response:", errorData);
+      throw new Error(errorData.detail || "Failed to upload context");
+    }
+
+    const result = await response.json();
+    console.log("Context upload successful:", result);
+    return result;
+  } catch (error) {
+    console.error("Error uploading context:", error);
+    throw error;
+  }
+};
+export const login = async (username, password) => {
+  const response = await fetch("/login", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: new URLSearchParams({
+      username: username,
+      password: password,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error("Login failed");
+  }
+
+  const data = await response.json();
+  localStorage.setItem("token", data.access_token);
+  return data;
 };

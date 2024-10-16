@@ -1,39 +1,35 @@
-// File: src/pages/LoginPage.js
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "../styles/LoginPage.css";
+import { login } from "../services/api";
 
 function LoginPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);  // State untuk loading
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
+    setError("");   // Reset error sebelum login
+    setLoading(true); // Set loading menjadi true saat proses login dimulai
 
     try {
-      const response = await fetch("http://localhost:8000/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: new URLSearchParams({
-          username: username,
-          password: password,
-        }),
-      });
+      const response = await login(username, password);
 
-      if (response.ok) {
-        const data = await response.json();
-        localStorage.setItem("token", data.access_token);
+      // Pengecekan respons dengan optional chaining
+      if (response?.detail) {
+        setError(response?.detail);
+      } else if (response?.access_token) {
         navigate("/home");
       } else {
-        setError("Invalid username or password");
+        setError("Unexpected error occurred");
       }
-    } catch (err) {
-      setError("An error occurred. Please try again.");
+    } catch (error) {
+      setError("Invalid username or password");
+    } finally {
+      setLoading(false);  // Set loading menjadi false setelah proses selesai
     }
   };
 
@@ -62,7 +58,10 @@ function LoginPage() {
           />
         </div>
         {error && <p className="error-message">{error}</p>}
-        <button type="submit">Login</button>
+
+        <button type="submit" disabled={loading}>
+          {loading ? "Logging in..." : "Login"}
+        </button>
       </form>
     </div>
   );

@@ -10,14 +10,6 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { formatFileSize } from "../utils/helpers";
 
-/**
- * UserInput Component
- *
- * Komponen untuk input pengguna dalam chat.
- *
- * @param {Function} onSendMessage - Callback function untuk mengirim pesan
- * @param {boolean} isGenerating - Status generasi respons
- */
 function UserInput({
   onSendMessage,
   isGenerating,
@@ -37,7 +29,6 @@ function UserInput({
     if (textarea) {
       textarea.style.height = "auto";
       const scrollHeight = textarea.scrollHeight;
-
       textarea.style.height = `${Math.min(scrollHeight, 150)}px`; // Max height 150px
     }
   };
@@ -46,10 +37,6 @@ function UserInput({
     setMessage(e.target.value);
   };
 
-  /**
-   * Menangani pengiriman pesan
-   * @param {Event} e - Event objek
-   */
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!isGenerating && message.trim()) {
@@ -103,7 +90,7 @@ function UserInput({
             }
           }}
           placeholder="Type your message..."
-        />{" "}
+        />
       </div>
       <button
         type="button"

@@ -13,7 +13,7 @@ operasi non-blocking.
 """
 
 from sqlalchemy.orm import Session
-from app.database import ChatManager, KnowledgeBase
+from app.database import ChatManager, KnowledgeManager
 from app.models import models
 from app import schemas
 from typing import List, Optional
@@ -26,7 +26,7 @@ from anthropic import AsyncAnthropic
 from config import Config
 import asyncio
 from app.utils.feature_utils import Feature
-from typing import List, Dict, Any
+from typing import Dict, Any
 from uuid import UUID
 from app.database.database import SessionLocal
 import json
@@ -43,7 +43,7 @@ if not CLAUDE_API_KEY:
 MODEL_NAME = Config.MODEL_NAME
 
 chat_manager = ChatManager()
-kb = KnowledgeBase()
+kb = KnowledgeManager()
 
 
 async def login(db: Session, username: str, password: str) -> Optional[models.User]:
@@ -207,12 +207,12 @@ async def process_chat_message(
     chat_id: UUID,
     message: str,
     feature: Feature = Feature.GENERAL,
-    file_path: Optional[str] = None,
+    file_contents: Optional[List[Dict[str, str]]] = None,
 ):
     async def event_generator():
         nonlocal chat_id
         try:
-            if not message and not file_path:
+            if not message and not file_contents:
                 raise ValueError(
                     "Pesan tidak boleh kosong dan tidak ada file yang diunggah"
                 )
@@ -231,7 +231,7 @@ async def process_chat_message(
                     db, chat_id, placeholder_response, is_user=False
                 )
 
-            kb_results = kb.search_items(message)
+            kb_results = kb.search_items(db, message)
             if kb_results:
                 kb_response = kb_results[0]
                 response = f"{kb_response.get('answer', '')}"
@@ -244,22 +244,15 @@ async def process_chat_message(
 
             chat_manager.add_message(db, chat_id, message, is_user=True)
 
-            file_id = None
-            file_content = None
-            if file_path:
-                file_name = os.path.basename(file_path)
-                file_size = os.path.getsize(file_path)
-                file_info = f"File attached: {file_name} (size: {file_size} bytes)"
-                file_id = chat_manager.add_file_to_chat(
-                    db, chat_id, file_name, file_path
-                )
-                chat_manager.add_message(
-                    db, chat_id, file_info, is_user=True, file_id=file_id
-                )
+            # Menambahkan informasi file ke pesan chat
+            if file_contents:
+                for file in file_contents:
+                    file_info = f"File attached: {file['name']}"
+                    chat_manager.add_message(db, chat_id, file_info, is_user=True)
 
             bot_response = ""
             async for chunk in chat_with_retry_stream(
-                user_id, chat_id, message, feature, file_content
+                user_id, chat_id, message, feature, file_contents
             ):
                 bot_response += chunk
                 yield f"data: {json.dumps({'type': 'message', 'content': chunk})}\n\n"
@@ -284,7 +277,7 @@ async def chat_with_retry_stream(
     chat_id: UUID,
     message: str,
     feature: Feature = Feature.GENERAL,
-    file_content: Optional[str] = None,
+    file_contents: Optional[List[Dict[str, str]]] = None,
 ):
     """
     Mengirim pesan ke Claude API dengan mekanisme retry dan streaming respons.
@@ -311,52 +304,74 @@ async def chat_with_retry_stream(
             chat_history = await get_chat_messages(chat_id)
             logger.info(f"Retrieved {len(chat_history)} messages from chat history")
 
-            knowledge_base_items = kb.get_all_items()
-            logger.info(
-                f"Retrieved {len(knowledge_base_items)} items from knowledge base"
-            )
-
-            knowledge_str = "\n".join(
-                [
-                    f"Q: {item.get('question', '')}\nA: {item.get('answer', '')}"
-                    + (
-                        f"\nImage: {item.get('image_path', '')}"
-                        if item.get("image_path")
-                        else ""
-                    )
-                    for item in knowledge_base_items
-                ]
-            )
-
-            system_message = (
-                get_system_prompt(feature)
-                + f"\n\nInformasi tambahan:\n\n{knowledge_str}"
-                + """
-            Jika pertanyaan tidak terkait dengan informasi di atas, jawab dengan bijak bahwa Anda tidak memiliki informasi tersebut.
-            Tidak perlu meminta maaf.
-            Kamu tetap harus meyakinkan user bahwa kamu masih bisa menjawab pertanyaan lain"""
-            )
-
-            messages = prepare_messages(chat_history, message, file_content)
-
-            async with AsyncAnthropic(api_key=CLAUDE_API_KEY) as client:
-                stream = await client.messages.create(
-                    model=MODEL_NAME,
-                    messages=messages,
-                    system=system_message,
-                    max_tokens=1000,
-                    temperature=0,
-                    stream=True,
+            db = SessionLocal()
+            try:
+                knowledge_base_items = kb.get_all_items(db)
+                logger.info(
+                    f"Retrieved {len(knowledge_base_items)} items from knowledge base"
                 )
 
-                async for chunk in stream:
-                    if chunk.type == "content_block_delta":
-                        yield chunk.delta.text
+                knowledge_str = "\n".join(
+                    [
+                        f"Q: {item.get('question', '')}\nA: {item.get('answer', '')}"
+                        for item in knowledge_base_items
+                    ]
+                )
 
-            logger.info(
-                f"Finished processing stream response for user {user_id}, chat {chat_id}"
-            )
-            return
+                system_message = (
+                    get_system_prompt(feature)
+                    + f"\n\nInformasi tambahan:\n\n{knowledge_str}"
+                )
+
+                context = kb.get_latest_context(db, user_id)
+                logger.info(f"Fetching context for user_id: {user_id}")
+                logger.info(f"DB session: {db}")
+                if context:
+                    if context.content_type == "text":
+                        system_message += f"\n\nAdditional context:\n{context.content}"
+                    elif context.content_type == "file":
+                        system_message += (
+                            f"\n\nAdditional context from file: {context.content}"
+                        )
+                    pass
+
+                # Menambahkan file_contents ke dalam pesan jika ada
+                if file_contents:
+                    for i, file_content in enumerate(file_contents):
+                        system_message += f"\n\nFile {i+1} content:\n{file_content}"
+
+                system_message += """
+                Jika pertanyaan tidak terkait dengan informasi di atas, jawab dengan bijak bahwa Anda tidak memiliki informasi tersebut.
+                Tidak perlu meminta maaf.
+                Kamu tetap harus meyakinkan user bahwa kamu masih bisa menjawab pertanyaan lain"""
+                # Menambahkan konteks dari file
+                if file_contents:
+                    system_message += "\n\nAttached files content:\n"
+                    for file in file_contents:
+                        system_message += f"\nFile: {file['name']}\nContent:\n{file['content'][:1000]}...\n"
+
+                messages = prepare_messages(chat_history, message, file_contents)
+
+                async with AsyncAnthropic(api_key=CLAUDE_API_KEY) as client:
+                    stream = await client.messages.create(
+                        model=MODEL_NAME,
+                        messages=messages,
+                        system=system_message,
+                        max_tokens=1000,
+                        temperature=0,
+                        stream=True,
+                    )
+
+                    async for chunk in stream:
+                        if chunk.type == "content_block_delta":
+                            yield chunk.delta.text
+
+                logger.info(
+                    f"Finished processing stream response for user {user_id}, chat {chat_id}"
+                )
+                return
+            finally:
+                db.close()  # Pastikan untuk menutup session database
 
         except Exception as e:
             logger.error(
@@ -370,14 +385,14 @@ async def chat_with_retry_stream(
     raise Exception("Maximum retry attempts reached without successful response.")
 
 
-def prepare_messages(chat_history, new_message, file_content=None):
+def prepare_messages(chat_history, new_message, file_contents=None):
     """
     Menyiapkan pesan untuk dikirim ke API Claude.
 
     Args:
         chat_history (List[Dict]): Riwayat chat.
         new_message (str): Pesan baru dari pengguna.
-        file_content (Optional): Konten file yang diunggah, jika ada.
+        file_contents (Optional): Konten file yang diunggah, jika ada.
 
     Returns:
         List[Dict]: Daftar pesan yang siap dikirim ke API.
@@ -401,9 +416,15 @@ def prepare_messages(chat_history, new_message, file_content=None):
         )
 
     user_message_content = [{"type": "text", "text": new_message}]
-    if file_content:
-        user_message_content.append(file_content)
-
+    # Jika ada file_contents, tambahkan ke pesan
+    if file_contents:
+        for file in file_contents:
+            user_message_content.append(
+                {
+                    "type": "text",
+                    "text": f"File: {file['name']}\nContent: {file['content'][:1000]}...",
+                }
+            )
     messages.append({"role": "user", "content": user_message_content})
 
     return messages

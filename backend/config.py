@@ -1,7 +1,10 @@
 import os
 
+from dotenv import load_dotenv
+
 
 class Config:
+    load_dotenv()
     """
     Kelas konfigurasi untuk menyimpan pengaturan aplikasi.
     """

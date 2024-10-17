@@ -114,7 +114,7 @@ def get_system_prompt(feature: Feature) -> str:
 
     prompts = {
         Feature.GENERAL: base_prompt
-        + "Anda mampu menjawab berbagai topik termasuk coding.",
+        + "Anda mampu menjawab berbagai topik termasuk coding. Anda tidak diizinkan untuk menjawab pertanyaan selain masalah pemrograman.",
         Feature.CODE_CHECK: base_prompt
         + "Anda akan menilai kesesuaian code dengan standar perusahaan. Standar code perusahaan meliputi: [masukkan standar code perusahaan Anda di sini]",
         Feature.CODE_HELPER: base_prompt

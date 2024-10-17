@@ -253,13 +253,13 @@ async def chat_with_retry_stream(
                 logger.info(f"Fetching context for user_id: {user_id}")
                 logger.info(f"DB session: {db}")
                 if context:
-                    system_message += f"\n\nAdditional context:\n{c.content}"
+                    system_message += f"\n\nAdditional context:"
                     for c in context:
                         if c.content_type == "text":
                             system_message += f"\n{c.content}"
                         elif c.content_type == "file":
                             system_message += (
-                                f"\n\nAdditional context from file: {c.content}"
+                                f"\n\nAdditional context from file: \n{c.content_raw}"
                             )
 
                 # Menambahkan file_contents ke dalam pesan jika ada
@@ -268,9 +268,9 @@ async def chat_with_retry_stream(
                         system_message += f"\n\nFile {i+1} content:\n{file_content}"
 
                 system_message += """
-                Jika pertanyaan tidak terkait dengan informasi di atas, jawab dengan bijak bahwa Anda tidak memiliki informasi tersebut.
-                Tidak perlu meminta maaf.
-                Kamu tetap harus meyakinkan user bahwa kamu masih bisa menjawab pertanyaan lain"""
+                \nJika pertanyaan tidak terkait dengan informasi di atas, jawab dengan bijak bahwa Anda tidak memiliki informasi tersebut.
+                \nTidak perlu meminta maaf.
+                \nKamu tetap harus meyakinkan user bahwa kamu masih bisa menjawab pertanyaan lain"""
                 # Menambahkan konteks dari file
                 if file_contents:
                     system_message += "\n\nAttached files content:\n"

@@ -1,9 +1,13 @@
 import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api.routes import api
 from dotenv import load_dotenv
 from fastapi.staticfiles import StaticFiles
+
+from app.api.auth_routes import auth_routes
+from app.api.chat_routes import chat_routes
+from app.api.context_routes import context_routes
+from app.api.user_routes import user_routes
 from app.repositories.database import Base, engine, create_tables
 
 # Konfigurasi logging diletakkan di bagian paling atas
@@ -35,7 +39,10 @@ app.add_middleware(
 )
 
 # Tambahkan router untuk endpoint
-app.include_router(api)
+app.include_router(auth_routes, tags=["Auth Routes"])
+app.include_router(user_routes, tags=["User Routes"])
+app.include_router(chat_routes, tags=["Chat Routes"])
+app.include_router(context_routes, tags=["Context Routes"])
 
 create_tables()
 

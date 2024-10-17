@@ -12,27 +12,27 @@ Fungsi-fungsi dalam modul ini sebagian besar bersifat asynchronous untuk menduku
 operasi non-blocking.
 """
 
-from sqlalchemy.orm import Session
-from app.repositories import ChatManager, KnowledgeManager
-from app.models import models
-from app import schemas
-from typing import List, Optional
-from fastapi import UploadFile, HTTPException
-import logging
-from app.utils.file_utils import save_uploaded_file
-from app.api.auth import verify_password, get_password_hash
-import os
-from anthropic import AsyncAnthropic
-from app.config.config import Config
 import asyncio
-from app.utils.feature_utils import Feature
-from typing import Dict, Any
-from uuid import UUID
-from app.repositories.database import SessionLocal
 import json
+import logging
+import traceback
+from typing import Dict, Any
+from typing import List, Optional
+from uuid import UUID
+
+from anthropic import AsyncAnthropic
+from fastapi import UploadFile, HTTPException
+from sqlalchemy.orm import Session
 from starlette.responses import StreamingResponse
 
-import traceback
+from app import schemas
+from app.config.config import Config
+from app.models import models
+from app.repositories import ChatManager, KnowledgeManager
+from app.repositories.database import SessionLocal
+from app.services.auth_service import verify_password, get_password_hash
+from app.utils.feature_utils import Feature
+from app.utils.file_utils import save_uploaded_file
 
 logger = logging.getLogger(__name__)
 

@@ -1,11 +1,17 @@
 from datetime import datetime, timedelta
+from typing import Optional
+
 from jose import JWTError, jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
+from sqlalchemy.orm import Session
+
 from app.config.config import Config
 import bcrypt
 import logging
 
+from app.models import models
+from app.services.user_service import get_user_by_username
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
 logger = logging.getLogger(__name__)
@@ -49,10 +55,28 @@ def verify_password(plain_password, hashed_password):
         logger.error(f"Error during password verification: {e}")
 
 
-def get_password_hash(password):
+async def login(db: Session, username: str, password: str) -> Optional[models.User]:
+    """
+    Mengautentikasi pengguna berdasarkan username dan password.
+
+    Args:
+        db (Session): Sesi repositories SQLAlchemy.
+        username (str): Username pengguna.
+        password (str): Password pengguna.
+
+    Returns:
+        Optional[models.User]: Objek User jika autentikasi berhasil, None jika gagal.
+
+    Raises:
+        HTTPException: Jika terjadi kesalahan server internal selama autentikasi.
+    """
     try:
-        salt = bcrypt.gensalt(14)
-        hashed = bcrypt.hashpw(password=password.encode(), salt=salt)
-        return hashed.decode()
+        user = await get_user_by_username(db, username)
+        if not user or not verify_password(password, user.hashed_password):
+            return None
+        return user
     except Exception as e:
-        logger.error(f"Error during get password hash: {e}")
+        logger.error(f"Error authenticating user: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail="Internal server error during authentication"
+        )

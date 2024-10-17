@@ -5,10 +5,10 @@ from fastapi import Form, UploadFile, File, Depends, HTTPException, APIRouter
 from sqlalchemy.orm import Session
 
 from app.models.models import User
-from app.repositories import get_db
+from app.repositories.database import get_db
 from app.repositories.knowledge_base import knowledge_manager
-from app.services import chat_service
 from app.services.auth_service import verify_token
+from app.services.user_service import get_user_by_username
 from app.utils.file_utils import save_uploaded_file
 
 logger = logging.getLogger(__name__)
@@ -23,7 +23,7 @@ async def upload_context(
     db: Session = Depends(get_db),
 ):
     try:
-        user = await chat_service.get_user_by_username(db, current_user)
+        user = await get_user_by_username(db, current_user)
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
 
@@ -53,7 +53,7 @@ async def get_context(
     current_user: str = Depends(verify_token), db: Session = Depends(get_db)
 ):
     try:
-        user = await chat_service.get_user_by_username(db, current_user)
+        user = await get_user_by_username(db, current_user)
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
 
@@ -77,7 +77,7 @@ async def get_all_contexts(
     current_user: User = Depends(verify_token), db: Session = Depends(get_db)
 ):
     try:
-        user = await chat_service.get_user_by_username(db, current_user)
+        user = await get_user_by_username(db, current_user)
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
 
@@ -102,7 +102,7 @@ async def delete_context(
     db: Session = Depends(get_db),
 ):
     try:
-        user = await chat_service.get_user_by_username(db, current_user)
+        user = await get_user_by_username(db, current_user)
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
 

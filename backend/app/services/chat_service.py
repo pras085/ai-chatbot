@@ -25,12 +25,11 @@ from fastapi import UploadFile, HTTPException
 from sqlalchemy.orm import Session
 from starlette.responses import StreamingResponse
 
-from app import schemas
 from app.config.config import Config
 from app.models import models
-from app.repositories import ChatManager, KnowledgeManager
+from app.repositories.chat_manager import ChatManager
 from app.repositories.database import SessionLocal
-from app.services.auth_service import verify_password, get_password_hash
+from app.repositories.knowledge_base import KnowledgeManager
 from app.utils.feature_utils import Feature
 from app.utils.file_utils import save_uploaded_file
 
@@ -44,80 +43,6 @@ MODEL_NAME = Config.MODEL_NAME
 
 chat_manager = ChatManager()
 kb = KnowledgeManager()
-
-
-async def login(db: Session, username: str, password: str) -> Optional[models.User]:
-    """
-    Mengautentikasi pengguna berdasarkan username dan password.
-
-    Args:
-        db (Session): Sesi repositories SQLAlchemy.
-        username (str): Username pengguna.
-        password (str): Password pengguna.
-
-    Returns:
-        Optional[models.User]: Objek User jika autentikasi berhasil, None jika gagal.
-
-    Raises:
-        HTTPException: Jika terjadi kesalahan server internal selama autentikasi.
-    """
-    try:
-        user = await get_user_by_username(db, username)
-        if not user or not verify_password(password, user.hashed_password):
-            return None
-        return user
-    except Exception as e:
-        logger.error(f"Error authenticating user: {str(e)}")
-        raise HTTPException(
-            status_code=500, detail="Internal server error during authentication"
-        )
-
-
-async def get_user_by_username(db: Session, username: str) -> Optional[models.User]:
-    """
-    Mengambil data pengguna berdasarkan username.
-
-    Args:
-        db (Session): Sesi repositories SQLAlchemy.
-        username (str): Username pengguna yang dicari.
-
-    Returns:
-        Optional[models.User]: Objek User jika ditemukan, None jika tidak ditemukan.
-
-    Raises:
-        HTTPException: Jika terjadi kesalahan server internal saat mengambil data pengguna.
-    """
-    try:
-        return chat_manager.get_user(db, username)
-    except Exception as e:
-        logger.error(f"Error getting user by username: {str(e)}")
-        raise HTTPException(
-            status_code=500, detail="Internal server error while fetching user"
-        )
-
-
-async def create_user(db: Session, user: schemas.UserCreate) -> models.User:
-    """
-    Membuat pengguna baru.
-
-    Args:
-        db (Session): Sesi repositories SQLAlchemy.
-        user (schemas.UserCreate): Data pengguna untuk dibuat.
-
-    Returns:
-        models.User: Objek User yang baru dibuat.
-
-    Raises:
-        HTTPException: Jika terjadi kesalahan server internal saat membuat pengguna.
-    """
-    try:
-        hashed_password = get_password_hash(user.password)
-        return chat_manager.create_user(db, user.username, hashed_password)
-    except Exception as e:
-        logger.error(f"Error creating user: {str(e)}")
-        raise HTTPException(
-            status_code=500, detail="Internal server error while creating user"
-        )
 
 
 async def get_user_chats(db: Session, user_id: int) -> List[Dict[str, Any]]:

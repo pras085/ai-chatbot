@@ -12,7 +12,8 @@ from sqlalchemy.dialects.postgresql import UUID as pgUUID
 from sqlalchemy.orm import relationship, declarative_base
 from sqlalchemy.sql import func
 import uuid
-from app.repositories import Base
+
+from app.repositories.database import Base
 
 
 class BaseModel(Base):

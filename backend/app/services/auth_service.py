@@ -7,7 +7,7 @@ import bcrypt
 import logging
 
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
 logger = logging.getLogger(__name__)
 
 

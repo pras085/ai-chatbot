@@ -1,7 +1,10 @@
 import React, { useState, useCallback } from 'react';
+import { useFeature } from '../contexts/FeatureContext';
+
 
 const ChatList = ({ chats, onSelectChat, onNewChat, onDeleteChat, userId }) => {
   const [isCreatingChat, setIsCreatingChat] = useState(false);
+  const { activeFeature } = useFeature();
 
   const handleCreateNewChat = useCallback(async () => {
     setIsCreatingChat(true);
@@ -39,7 +42,7 @@ const ChatList = ({ chats, onSelectChat, onNewChat, onDeleteChat, userId }) => {
           onClick={handleCreateNewChat}
           disabled={isCreatingChat}
         >
-          {isCreatingChat ? "Creating..." : "Create New Chat"}
+          {isCreatingChat ? "Creating..." : `Create New Chat ${activeFeature}`}
         </button>
 
         <ul className="list-none p-0 m-0 flex-grow overflow-y-auto mt-4">

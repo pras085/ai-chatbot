@@ -7,6 +7,7 @@ import { useChats } from "../hooks/useChats";
 import ProductInformation from "../components/ProductInformation";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChevronLeft, faChevronRight } from "@fortawesome/free-solid-svg-icons";
+import { useFeature } from '../contexts/FeatureContext';
 
 function ChatListPage() {
   const navigate = useNavigate();
@@ -14,6 +15,7 @@ function ChatListPage() {
   const { chats, isLoading, error, fetchChats, setChats } = useChats(user?.id);
   const [contexts, setContexts] = useState([]);
   const [showProductInfo, setShowProductInfo] = useState(true);
+  const { activeFeature } = useFeature();
 
   useEffect(() => {
     if (user && user.id) {
@@ -75,7 +77,7 @@ function ChatListPage() {
   }, [navigate, setChats]);
 
   const createNewChats = async () => {
-    const newChat = await createNewChat(user.id);
+    const newChat = await createNewChat(user.id, activeFeature);
     handleNewChat(newChat);
     return newChat;
   };

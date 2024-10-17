@@ -187,9 +187,9 @@ export const getUserChats = async (userId) => {
  * @param {string} userId - ID pengguna
  * @returns {Promise<Object>} - Objek berisi informasi chat baru
  */
-export const createNewChat = async (userId) => {
+export const createNewChat = async (userId, activeFeature) => {
   console.log("Creating new chat for user:", userId);
-  const response = await apiRequest(`/user/${userId}/chats`, {
+  const response = await apiRequest(`/user/${userId}/chats?feature=${activeFeature}`, {
     method: "POST",
   });
   return response.json();

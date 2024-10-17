@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import ChatList from "../components/ChatList";
-import { deleteContext, deleteChat, getContext, uploadContext } from "../services/api";
+import { deleteContext, deleteChat, getContext, uploadContext, createNewChat } from "../services/api";
 import useUser from "../hooks/useUser";
 import { useChats } from "../hooks/useChats";
 import ProductInformation from "../components/ProductInformation";
@@ -74,6 +74,12 @@ function ChatListPage() {
     navigate(`/chat/${newChat.id}`);
   }, [navigate, setChats]);
 
+  const createNewChats = async () => {
+    const newChat = await createNewChat(user.id);
+    handleNewChat(newChat);
+    return newChat;
+  };
+
   const handleDeleteChat = useCallback(async (deletedChatId) => {
     try {
       await deleteChat(deletedChatId);
@@ -102,7 +108,7 @@ function ChatListPage() {
         <ChatList
           chats={chats}
           onSelectChat={handleSelectChat}
-          onNewChat={handleNewChat}
+          onNewChat={createNewChats}
           onDeleteChat={handleDeleteChat}
           userId={user.id}
         />

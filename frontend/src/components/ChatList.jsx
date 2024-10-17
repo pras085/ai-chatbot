@@ -10,6 +10,8 @@ const ChatList = ({ chats, onSelectChat, onNewChat, onDeleteChat, userId }) => {
         throw new Error("User ID is not available");
       }
       const newChat = await onNewChat(userId);
+      console.log(`buat chat baru: ${newChat.id}`);
+      console.log(newChat);
       onSelectChat(newChat.id);
     } catch (error) {
       console.error("Error creating new chat:", error);

@@ -144,7 +144,7 @@ async def process_chat_message(
                 )
 
             if chat_id is None:
-                chat_id = create_new_chat(db, user_id)
+                chat_id = create_new_chat(db, user_id, feature)
 
             if await is_first_message(chat_id):
                 title = message[:50] + "..." if len(message) > 50 else message
@@ -380,11 +380,12 @@ async def get_chat_messages(chat_id: UUID) -> List[dict]:
         )
 
 
-async def create_new_chat(db: Session, user_id: int, title: str = "New Chat"):
+async def create_new_chat(db: Session, user_id: int, feature: Feature = Feature.GENERAL) -> dict:
     """
     Membuat chat baru untuk pengguna tertentu.
 
     Args:
+        feature:
         db (Session): Sesi repositories SQLAlchemy.
         user_id (int): ID pengguna yang membuat chat.
 
@@ -395,7 +396,7 @@ async def create_new_chat(db: Session, user_id: int, title: str = "New Chat"):
         HTTPException: Jika terjadi kesalahan server internal saat membuat chat baru.
     """
     try:
-        new_chat = chat_manager.create_chat(db, user_id)
+        new_chat = chat_manager.create_chat(db, user_id, feature)
         return {
             "id": str(new_chat.id),
             "title": new_chat.title,

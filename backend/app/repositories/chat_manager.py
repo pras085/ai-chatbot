@@ -9,6 +9,7 @@ import traceback
 from sqlalchemy import select
 import os
 
+from app.utils.feature_utils import Feature
 
 logger = logging.getLogger(__name__)
 
@@ -24,8 +25,8 @@ class ChatManager:
         db.refresh(db_user)
         return db_user
 
-    def create_chat(self, db: Session, user_id: int) -> Chat:
-        db_chat = Chat(user_id=user_id, title="New Chat")
+    def create_chat(self, db: Session, user_id: int, feature: Feature = Feature.GENERAL) -> Chat:
+        db_chat = Chat(user_id=user_id, title="New Chat", feature=feature.name)
         db.add(db_chat)
         db.commit()
         db.refresh(db_chat)

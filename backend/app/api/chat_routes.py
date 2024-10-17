@@ -141,9 +141,13 @@ async def get_chat_messages(chat_id: str, db: Session = Depends(get_db)):
 
 
 @chat_routes.post("/user/{user_id}/chats", response_model=schemas.ChatCreate)
-async def create_new_chat(user_id: int, db: Session = Depends(get_db)):
+async def create_new_chat(
+        user_id: int,
+        db: Session = Depends(get_db),
+        feature: Feature = Feature.GENERAL
+):
     try:
-        new_chat = await chat_service.create_new_chat(db, user_id)
+        new_chat = await chat_service.create_new_chat(db, user_id, feature)
         return new_chat
     except SQLAlchemyError as e:
         logger.error(f"Database error creating chat: {str(e)}")

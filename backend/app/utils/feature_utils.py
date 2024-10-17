@@ -2,10 +2,10 @@ from enum import Enum, auto
 
 
 class Feature(Enum):
-    GENERAL = auto()
-    CODE_CHECK = auto()
-    CODE_HELPER = auto()
-    CS_CHATBOT = auto()
+    GENERAL = 'GENERAL'
+    CODE_CHECK = 'CODE_CHECK'
+    CODE_HELPER = 'CODE_HELPER'
+    CS_CHATBOT = 'CS_CHATBOT'
 
     @classmethod
     def from_string(cls, feature_string: str):

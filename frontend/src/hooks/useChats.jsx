@@ -1,7 +1,7 @@
 import { useState, useCallback } from "react";
 import { getUserChats } from "../services/api";
 
-export const useChats = (userId) => {
+export const useChats = (userId, activeFeature) => {
   const [chats, setChats] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -11,7 +11,7 @@ export const useChats = (userId) => {
     setIsLoading(true);
     setError(null);
     try {
-      const fetchedChats = await getUserChats(userId);
+      const fetchedChats = await getUserChats(userId, activeFeature);
       setChats(fetchedChats);
     } catch (err) {
       setError(err.message);

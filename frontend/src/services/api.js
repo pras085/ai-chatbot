@@ -176,8 +176,8 @@ export const getChatMessages = async (chatId) => {
  * @param {string} userId - ID pengguna
  * @returns {Promise<Array>} - Array berisi daftar chat pengguna
  */
-export const getUserChats = async (userId) => {
-  const response = await apiRequest(`/user/${userId}/chats`);
+export const getUserChats = async (userId, activeFeature) => {
+  const response = await apiRequest(`/user/${userId}/chats?feature=${activeFeature}`);
   return response.json();
 };
 

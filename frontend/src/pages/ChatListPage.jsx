@@ -12,10 +12,10 @@ import { useFeature } from '../contexts/FeatureContext';
 function ChatListPage() {
   const navigate = useNavigate();
   const { user, loading: userLoading } = useUser();
-  const { chats, isLoading, error, fetchChats, setChats } = useChats(user?.id);
   const [contexts, setContexts] = useState([]);
   const [showProductInfo, setShowProductInfo] = useState(true);
   const { activeFeature } = useFeature();
+  const { chats, isLoading, error, fetchChats, setChats } = useChats(user?.id, activeFeature);
 
   useEffect(() => {
     if (user && user.id) {

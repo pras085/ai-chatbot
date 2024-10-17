@@ -6,8 +6,8 @@ from fastapi import APIRouter, HTTPException, Depends, File, Form, UploadFile, s
 from fastapi.responses import FileResponse, JSONResponse
 from sqlalchemy.orm import Session
 from app.services import chat_service
-from app.database import get_db
-from app.database.knowledge_base import knowledge_manager
+from app.repositories import get_db
+from app.repositories.knowledge_base import knowledge_manager
 from app import schemas
 from app.utils.file_utils import save_uploaded_file
 from typing import List, Dict, Any

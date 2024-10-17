@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.routes import api
 from dotenv import load_dotenv
 from fastapi.staticfiles import StaticFiles
-from app.database.database import Base, engine, create_tables
+from app.repositories.database import Base, engine, create_tables
 
 # Konfigurasi logging diletakkan di bagian paling atas
 logging.basicConfig(
@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 # Load environment variables
 load_dotenv()
 
-# Buat tabel di database jika belum ada
+# Buat tabel di repositories jika belum ada
 Base.metadata.create_all(bind=engine)
 
 # Inisialisasi FastAPI

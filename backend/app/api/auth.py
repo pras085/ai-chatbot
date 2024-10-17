@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 from jose import JWTError, jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
-from config import Config
+from app.config.config import Config
 import bcrypt
 import logging
 

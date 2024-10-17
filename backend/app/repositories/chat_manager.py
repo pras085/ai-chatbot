@@ -88,7 +88,7 @@ class ChatManager:
         """
         Menghapus chat berdasarkan ID.
         Args:
-            db (Session): Sesi database SQLAlchemy.
+            db (Session): Sesi repositories SQLAlchemy.
             chat_id (UUID): ID chat yang akan dihapus.
 
         Returns:

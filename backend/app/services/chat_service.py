@@ -2,10 +2,10 @@
 chat_service.py
 
 Modul ini menyediakan layanan tingkat tinggi untuk operasi terkait chat dalam aplikasi.
-Ini bertindak sebagai perantara antara routes dan database manager, menangani logika bisnis
+Ini bertindak sebagai perantara antara routes dan repositories manager, menangani logika bisnis
 dan penanganan error.
 
-Modul ini menggunakan ChatManager dan KnowledgeBase untuk operasi database,
+Modul ini menggunakan ChatManager dan KnowledgeBase untuk operasi repositories,
 serta berbagai utilitas untuk autentikasi dan penanganan file.
 
 Fungsi-fungsi dalam modul ini sebagian besar bersifat asynchronous untuk mendukung
@@ -13,7 +13,7 @@ operasi non-blocking.
 """
 
 from sqlalchemy.orm import Session
-from app.database import ChatManager, KnowledgeManager
+from app.repositories import ChatManager, KnowledgeManager
 from app.models import models
 from app import schemas
 from typing import List, Optional
@@ -23,12 +23,12 @@ from app.utils.file_utils import save_uploaded_file
 from app.api.auth import verify_password, get_password_hash
 import os
 from anthropic import AsyncAnthropic
-from config import Config
+from app.config.config import Config
 import asyncio
 from app.utils.feature_utils import Feature
 from typing import Dict, Any
 from uuid import UUID
-from app.database.database import SessionLocal
+from app.repositories.database import SessionLocal
 import json
 from starlette.responses import StreamingResponse
 
@@ -51,7 +51,7 @@ async def login(db: Session, username: str, password: str) -> Optional[models.Us
     Mengautentikasi pengguna berdasarkan username dan password.
 
     Args:
-        db (Session): Sesi database SQLAlchemy.
+        db (Session): Sesi repositories SQLAlchemy.
         username (str): Username pengguna.
         password (str): Password pengguna.
 
@@ -78,7 +78,7 @@ async def get_user_by_username(db: Session, username: str) -> Optional[models.Us
     Mengambil data pengguna berdasarkan username.
 
     Args:
-        db (Session): Sesi database SQLAlchemy.
+        db (Session): Sesi repositories SQLAlchemy.
         username (str): Username pengguna yang dicari.
 
     Returns:
@@ -101,7 +101,7 @@ async def create_user(db: Session, user: schemas.UserCreate) -> models.User:
     Membuat pengguna baru.
 
     Args:
-        db (Session): Sesi database SQLAlchemy.
+        db (Session): Sesi repositories SQLAlchemy.
         user (schemas.UserCreate): Data pengguna untuk dibuat.
 
     Returns:
@@ -125,7 +125,7 @@ async def get_user_chats(db: Session, user_id: int) -> List[Dict[str, Any]]:
     Mengambil daftar chat untuk pengguna tertentu.
 
     Args:
-        db (Session): Sesi database SQLAlchemy.
+        db (Session): Sesi repositories SQLAlchemy.
         user_id (int): ID pengguna.
 
     Returns:
@@ -371,7 +371,7 @@ async def chat_with_retry_stream(
                 )
                 return
             finally:
-                db.close()  # Pastikan untuk menutup session database
+                db.close()  # Pastikan untuk menutup session repositories
 
         except Exception as e:
             logger.error(
@@ -458,7 +458,7 @@ async def create_new_chat(db: Session, user_id: int, title: str = "New Chat"):
     Membuat chat baru untuk pengguna tertentu.
 
     Args:
-        db (Session): Sesi database SQLAlchemy.
+        db (Session): Sesi repositories SQLAlchemy.
         user_id (int): ID pengguna yang membuat chat.
 
     Returns:
@@ -488,7 +488,7 @@ async def add_knowledge_base_item(
     Menambahkan item baru ke knowledge base.
 
     Args:
-        db (Session): Sesi database SQLAlchemy.
+        db (Session): Sesi repositories SQLAlchemy.
         question (str): Pertanyaan untuk item knowledge base.
         answer (str): Jawaban untuk item knowledge base.
         image (Optional[UploadFile]): File gambar yang diunggah, jika ada.
@@ -518,7 +518,7 @@ async def update_chat_title(db: Session, chat_id: UUID, title: str) -> bool:
     Memperbarui judul chat.
 
     Args:
-        db (Session): Sesi database SQLAlchemy.
+        db (Session): Sesi repositories SQLAlchemy.
         chat_id (int): ID chat yang akan diperbarui.
         title (str): Judul baru untuk chat.
 
@@ -542,7 +542,7 @@ async def delete_chat(db: Session, chat_id: UUID, user_id: int):
     Menghapus chat berdasarkan ID.
 
     Args:
-        db (Session): Sesi database SQLAlchemy.
+        db (Session): Sesi repositories SQLAlchemy.
         chat_id (int): ID chat yang akan dihapus.
 
     Returns:
@@ -569,7 +569,7 @@ async def get_latest_chat_id(db: Session, user_id: int) -> Optional[UUID]:
     Mendapatkan ID chat terbaru untuk pengguna tertentu.
 
     Args:
-        db (Session): Sesi database SQLAlchemy.
+        db (Session): Sesi repositories SQLAlchemy.
         user_id (int): ID pengguna.
 
     Returns:

@@ -84,14 +84,14 @@ class KnowledgeManager:
             logger.error(f"Error getting user contexts: {str(e)}")
             raise
 
-    def get_latest_context(self, db: Session, user_id: int) -> Optional[Context]:
+    def get_latest_context(self, db: Session, user_id: int) -> Optional[List[Context]]:
         try:
             logger.info(f"Getting latest context for user_id: {user_id}")
             context = (
                 db.query(Context)
                 .filter(Context.user_id == user_id)
                 .order_by(Context.updated_at.desc())
-                .first()
+                .all()
             )
             if not context:  # Jika tidak ada context
                 logger.info(f"No context found for user {user_id}")

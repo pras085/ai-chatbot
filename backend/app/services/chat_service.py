@@ -32,6 +32,7 @@ from app.repositories.database import SessionLocal
 from app.repositories.knowledge_base import KnowledgeManager
 from app.utils.feature_utils import Feature
 from app.utils.file_utils import save_uploaded_file
+from app.repositories.prompt_logs import prompt_logs_manager
 
 logger = logging.getLogger(__name__)
 
@@ -252,13 +253,14 @@ async def chat_with_retry_stream(
                 logger.info(f"Fetching context for user_id: {user_id}")
                 logger.info(f"DB session: {db}")
                 if context:
-                    if context.content_type == "text":
-                        system_message += f"\n\nAdditional context:\n{context.content}"
-                    elif context.content_type == "file":
-                        system_message += (
-                            f"\n\nAdditional context from file: {context.content}"
-                        )
-                    pass
+                    system_message += f"\n\nAdditional context:\n{c.content}"
+                    for c in context:
+                        if c.content_type == "text":
+                            system_message += f"\n{c.content}"
+                        elif c.content_type == "file":
+                            system_message += (
+                                f"\n\nAdditional context from file: {c.content}"
+                            )
 
                 # Menambahkan file_contents ke dalam pesan jika ada
                 if file_contents:
@@ -290,10 +292,10 @@ async def chat_with_retry_stream(
                     async for chunk in stream:
                         if chunk.type == "content_block_delta":
                             yield chunk.delta.text
-
                 logger.info(
                     f"Finished processing stream response for user {user_id}, chat {chat_id}"
                 )
+                prompt_logs_manager.add_prompt_logs(db, user_id, str(messages), system_message)
                 return
             finally:
                 db.close()  # Pastikan untuk menutup session repositories

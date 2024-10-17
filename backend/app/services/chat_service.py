@@ -111,7 +111,7 @@ def get_system_prompt(feature: Feature) -> str:
     Returns:
         str: System prompt yang sesuai dengan fitur.
     """
-    base_prompt = "Anda adalah asisten AI untuk muatmuat.com. "
+    base_prompt = "Anda adalah asisten AI untuk muatmuat.com. Anda hanya diizinkan untuk menjawab pertanyaan seputar pemrograman dan seputar profil perusahaan muatmuat.com"
 
     prompts = {
         Feature.GENERAL: base_prompt

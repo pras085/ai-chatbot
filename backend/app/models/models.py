@@ -109,6 +109,16 @@ class Context(Base):
     user = relationship("User", back_populates="contexts")
 
 
+class PromptLogs(Base):
+    __tablename__ = "prompted_logs"
+
+    id = Column(pgUUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    message = Column(Text, nullable=False)
+    system_message = Column(Text, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
 User.contexts = relationship(
     "Context", order_by=Context.created_at, back_populates="user"
 )

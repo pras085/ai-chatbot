@@ -46,11 +46,12 @@ chat_manager = ChatManager()
 kb = KnowledgeManager()
 
 
-async def get_user_chats(db: Session, user_id: int) -> List[Dict[str, Any]]:
+async def get_user_chats(db: Session, user_id: int, feature: Feature = Feature.GENERAL) -> List[Dict[str, Any]]:
     """
     Mengambil daftar chat untuk pengguna tertentu.
 
     Args:
+        feature:
         db (Session): Sesi repositories SQLAlchemy.
         user_id (int): ID pengguna.
 
@@ -61,7 +62,7 @@ async def get_user_chats(db: Session, user_id: int) -> List[Dict[str, Any]]:
         HTTPException: Jika terjadi kesalahan server internal saat mengambil daftar chat.
     """
     try:
-        chats = chat_manager.get_user_chats(db, user_id)
+        chats = chat_manager.get_user_chats(db, user_id, feature)
         return [
             {
                 "chat_id": str(chat.id),

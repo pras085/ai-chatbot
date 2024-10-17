@@ -40,11 +40,12 @@ async def delete_chat_endpoint(
 
 @chat_routes.get("/user/{user_id}/chats")
 async def get_user_chats(
-    user_id: int, db: Session = Depends(get_db)
+    user_id: int, db: Session = Depends(get_db),
+    feature: Feature = Feature.GENERAL
 ) -> List[Dict[str, Any]]:
     logger.info(f"Attempting to fetch chats for user_id: {user_id}")
     try:
-        chats = await chat_service.get_user_chats(db, user_id)
+        chats = await chat_service.get_user_chats(db, user_id, feature)
         logger.info(f"Successfully fetched {len(chats)} chats for user_id: {user_id}")
         return chats
     except HTTPException as he:

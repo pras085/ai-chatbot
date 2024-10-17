@@ -77,10 +77,10 @@ class ChatManager:
             logger.error(f"Error retrieving chat messages: {str(e)}", exc_info=True)
             raise  # Re-raise the exception instead of returning an empty list
 
-    def get_user_chats(self, db: Session, user_id: int) -> List[Chat]:
+    def get_user_chats(self, db: Session, user_id: int, feature: Feature = Feature.GENERAL) -> List[Chat]:
         return (
             db.query(Chat)
-            .filter(Chat.user_id == user_id)
+            .filter(Chat.user_id == user_id, Chat.feature == feature.name)
             .order_by(desc(Chat.created_at))
             .all()
         )

@@ -31,8 +31,10 @@ async def upload_context(
             context = knowledge_manager.add_context(db, user.id, text, "text")
         elif file:
             file_path = await save_uploaded_file(file)
+            await file.seek(0)
+            content = await file.read()
             context = knowledge_manager.add_context(
-                db, user.id, file.filename, "file", file_path
+                db, user.id, file.filename, "file", content.decode("utf-8", errors="ignore"), file_path
             )
         else:
             raise HTTPException(

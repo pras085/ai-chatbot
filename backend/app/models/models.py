@@ -102,6 +102,7 @@ class Context(Base):
     user_id = Column(Integer, ForeignKey("users.id"))
     content = Column(Text, nullable=False)
     content_type = Column(String, nullable=False)  # 'text' atau 'file'
+    content_raw = Column(Text, nullable=True)
     file_path = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())

@@ -52,6 +52,7 @@ class KnowledgeManager:
         user_id: int,
         content: str,
         content_type: str,
+        content_raw: str = None,
         file_path: str = None,
     ):
         try:
@@ -61,6 +62,7 @@ class KnowledgeManager:
                 content=content,
                 content_type=content_type,
                 file_path=file_path,
+                content_raw=content_raw,
             )
             db.add(new_context)
             db.commit()

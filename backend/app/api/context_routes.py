@@ -5,7 +5,7 @@ from fastapi import Form, UploadFile, File, Depends, HTTPException, APIRouter
 from sqlalchemy.orm import Session
 
 from app.config.database import get_db
-from app.models.models import User
+from app.models.jwt import JwtUser
 from app.repositories.context_manager import context_manager
 from app.services.auth_service import verify_token
 from app.services.user_service import get_user_by_username
@@ -19,11 +19,11 @@ context_routes = APIRouter()
 async def upload_context(
     text: str = Form(None),
     file: UploadFile = File(None),
-    current_user: str = Depends(verify_token),
+    current_user: JwtUser = Depends(verify_token),
     db: Session = Depends(get_db),
 ):
     try:
-        user = await get_user_by_username(db, current_user)
+        user = await get_user_by_username(db, current_user.username)
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
 
@@ -52,10 +52,11 @@ async def upload_context(
 
 @context_routes.get("/context")
 async def get_context(
-    current_user: str = Depends(verify_token), db: Session = Depends(get_db)
+    current_user: JwtUser = Depends(verify_token),
+    db: Session = Depends(get_db)
 ):
     try:
-        user = await get_user_by_username(db, current_user)
+        user = await get_user_by_username(db, current_user.username)
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
 
@@ -76,10 +77,11 @@ async def get_context(
 
 @context_routes.get("/contexts")
 async def get_all_contexts(
-    current_user: User = Depends(verify_token), db: Session = Depends(get_db)
+    current_user: JwtUser = Depends(verify_token),
+    db: Session = Depends(get_db)
 ):
     try:
-        user = await get_user_by_username(db, current_user)
+        user = await get_user_by_username(db, current_user.username)
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
 
@@ -100,11 +102,11 @@ async def get_all_contexts(
 @context_routes.delete("/context/{context_id}")
 async def delete_context(
     context_id: UUID,
-    current_user: User = Depends(verify_token),
+    current_user: JwtUser = Depends(verify_token),
     db: Session = Depends(get_db),
 ):
     try:
-        user = await get_user_by_username(db, current_user)
+        user = await get_user_by_username(db, current_user.username)
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
 

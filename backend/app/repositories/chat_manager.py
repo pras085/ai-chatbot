@@ -15,16 +15,6 @@ logger = logging.getLogger(__name__)
 
 
 class ChatManager:
-    def get_user(self, db: Session, username: str) -> Optional[User]:
-        return db.query(User).filter(User.username == username).first()
-
-    def create_user(self, db: Session, username: str, hashed_password: str) -> User:
-        db_user = User(username=username, hashed_password=hashed_password)
-        db.add(db_user)
-        db.commit()
-        db.refresh(db_user)
-        return db_user
-
     def create_chat(self, db: Session, user_id: int, feature: Feature = Feature.GENERAL) -> Chat:
         db_chat = Chat(user_id=user_id, title="New Chat", feature=feature.name)
         db.add(db_chat)

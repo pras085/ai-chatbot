@@ -11,6 +11,7 @@ import bcrypt
 import logging
 
 from app.models import models
+from app.models.jwt import JwtUser
 from app.services.user_service import get_user_by_username
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
@@ -38,10 +39,12 @@ def verify_token(token: str = Depends(oauth2_scheme)):
     )
     try:
         payload = jwt.decode(token, Config.SECRET_KEY, algorithms=[Config.ALGORITHM])
-        username: str = payload.get("sub")
+        username: str = payload.get("username")
+        id: int = payload.get("id")
+        role: str = payload.get("role")
         if username is None:
             raise credentials_exception
-        return username
+        return JwtUser(username, id, role)
     except JWTError:
         raise credentials_exception
 

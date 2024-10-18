@@ -11,10 +11,11 @@ from starlette import status
 from starlette.responses import JSONResponse, FileResponse
 
 from app import schemas
-from app.api.user_routes import get_current_user
 from app.config.database import get_db
-from app.models.models import User, ChatFile
+from app.models.jwt import JwtUser
+from app.models.models import ChatFile
 from app.services import chat_service, prompt_service
+from app.services.auth_service import verify_token
 from app.utils.feature_utils import Feature
 
 chat_routes = APIRouter()
@@ -24,7 +25,7 @@ logger = logging.getLogger(__name__)
 @chat_routes.delete("/chats/{chat_id}")
 async def delete_chat_endpoint(
     chat_id: UUID,
-    current_user: User = Depends(get_current_user),
+    current_user: JwtUser = Depends(verify_token),
     db: Session = Depends(get_db),
 ):
     try:
@@ -40,13 +41,15 @@ async def delete_chat_endpoint(
 
 @chat_routes.get("/user/{user_id}/chats")
 async def get_user_chats(
-    user_id: int, db: Session = Depends(get_db),
-    feature: Feature = Feature.GENERAL
+    db: Session = Depends(get_db),
+    feature: Feature = Feature.GENERAL,
+    user_id: int = 0, # unused
+    current_user: JwtUser = Depends(verify_token),
 ) -> List[Dict[str, Any]]:
-    logger.info(f"Attempting to fetch chats for user_id: {user_id}")
+    logger.info(f"Attempting to fetch chats for user_id: {current_user.id}")
     try:
-        chats = await chat_service.get_user_chats(db, user_id, feature)
-        logger.info(f"Successfully fetched {len(chats)} chats for user_id: {user_id}")
+        chats = await chat_service.get_user_chats(db, current_user.id, feature)
+        logger.info(f"Successfully fetched {len(chats)} chats for user_id: {current_user.id}")
         return chats
     except HTTPException as he:
         logger.error(f"HTTP exception in get_user_chats: {str(he)}")
@@ -60,10 +63,10 @@ async def get_user_chats(
 async def send_chat_message(
     message: str = Form(...),
     files: List[UploadFile] = File(None),  # Banyak file
-    user_id: int = Form(...),
     chat_id: UUID = Form(...),
     db: Session = Depends(get_db),
     feature: Feature = Feature.GENERAL,
+    current_user: JwtUser = Depends(verify_token),
 ):
     try:
         file_contents = []
@@ -82,7 +85,7 @@ async def send_chat_message(
 
         return await prompt_service.process_chat_message(
             db,
-            user_id,
+            current_user.id,
             chat_id,
             message,
             feature,
@@ -97,11 +100,17 @@ async def send_chat_message(
 
 
 @chat_routes.get("/chat/{chat_id}/messages")
-async def get_chat_messages(chat_id: str, db: Session = Depends(get_db)):
+async def get_chat_messages(
+        chat_id: str,
+        db: Session = Depends(get_db),
+        current_user: JwtUser = Depends(verify_token),
+):
     """
     Endpoint untuk mengambil pesan-pesan dari chat tertentu.
 
     Args:
+        current_user:
+        db:
         chat_id (str): ID chat.
 
     Returns:
@@ -145,10 +154,11 @@ async def get_chat_messages(chat_id: str, db: Session = Depends(get_db)):
 async def create_new_chat(
         user_id: int,
         db: Session = Depends(get_db),
-        feature: Feature = Feature.GENERAL
+        feature: Feature = Feature.GENERAL,
+        current_user: JwtUser = Depends(verify_token),
 ):
     try:
-        new_chat = await chat_service.create_new_chat(db, user_id, feature)
+        new_chat = await chat_service.create_new_chat(db, current_user.id, feature)
         return new_chat
     except SQLAlchemyError as e:
         logger.error(f"Database error creating chat: {str(e)}")
@@ -162,7 +172,10 @@ async def create_new_chat(
 
 
 @chat_routes.get("/uploads/{file_path:path}")
-async def get_file(file_path: str, current_user: User = Depends(get_current_user)):
+async def get_file(
+        file_path: str,
+        current_user: JwtUser = Depends(verify_token)
+):
     try:
         if not os.path.exists(file_path):
             raise HTTPException(status_code=404, detail="File not found")

@@ -1,3 +1,4 @@
+import logging
 from typing import Optional
 
 from fastapi import HTTPException
@@ -5,9 +6,11 @@ from sqlalchemy.orm import Session
 
 from app import schemas
 from app.models import models
+from app.repositories.user_manager import UserManager
 from app.utils.auth_utils import get_password_hash
-from app.services.chat_service import chat_manager, logger
 
+user_manager = UserManager()
+logger = logging.getLogger(__name__)
 
 async def get_user_by_username(db: Session, username: str) -> Optional[models.User]:
     """
@@ -24,7 +27,7 @@ async def get_user_by_username(db: Session, username: str) -> Optional[models.Us
         HTTPException: Jika terjadi kesalahan server internal saat mengambil data pengguna.
     """
     try:
-        return chat_manager.get_user(db, username)
+        return user_manager.get_user(db, username)
     except Exception as e:
         logger.error(f"Error getting user by username: {str(e)}")
         raise HTTPException(
@@ -48,7 +51,7 @@ async def create_user(db: Session, user: schemas.UserCreate) -> models.User:
     """
     try:
         hashed_password = get_password_hash(user.password)
-        return chat_manager.create_user(db, user.username, hashed_password)
+        return user_manager.create_user(db, user.username, hashed_password)
     except Exception as e:
         logger.error(f"Error creating user: {str(e)}")
         raise HTTPException(

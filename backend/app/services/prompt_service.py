@@ -7,11 +7,12 @@ from anthropic import AsyncAnthropic
 from sqlalchemy.orm import Session
 from starlette.responses import StreamingResponse
 
-from app.repositories.database import SessionLocal
+from app.config.database import SessionLocal
 from app.repositories.prompt_logs_manager import prompt_logs_manager
 
-from app.services.new_chat_service import create_new_chat, is_first_message, update_chat_title, chat_manager, kb, \
-    logger, get_chat_messages, CLAUDE_API_KEY, MODEL_NAME
+from app.services.new_chat_service import create_new_chat, is_first_message, update_chat_title, chat_manager, \
+    get_chat_messages, CLAUDE_API_KEY, MODEL_NAME
+from app.services.knowledge_base_service import logger, kb
 from app.utils.feature_utils import Feature
 
 

@@ -1,35 +1,17 @@
-"""
-chat_service.py
-
-Modul ini menyediakan layanan tingkat tinggi untuk operasi terkait chat dalam aplikasi.
-Ini bertindak sebagai perantara antara routes dan repositories manager, menangani logika bisnis
-dan penanganan error.
-
-Modul ini menggunakan ChatManager dan KnowledgeBase untuk operasi repositories,
-serta berbagai utilitas untuk autentikasi dan penanganan file.
-
-Fungsi-fungsi dalam modul ini sebagian besar bersifat asynchronous untuk mendukung
-operasi non-blocking.
-"""
-
-import logging
 import traceback
 from typing import Dict, Any
 from typing import List, Optional
 from uuid import UUID
 
-from fastapi import UploadFile, HTTPException
+from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 from app.config.config import Config
 from app.config.database import SessionLocal
 from app.models import models
 from app.repositories.chat_manager import ChatManager
-from app.repositories.knowledge_base_manager import KnowledgeManager
+from app.services.knowledge_base_service import logger
 from app.utils.feature_utils import Feature
-from app.utils.file_utils import save_uploaded_file
-
-logger = logging.getLogger(__name__)
 
 CLAUDE_API_KEY = Config.CLAUDE_API_KEY
 if not CLAUDE_API_KEY:
@@ -38,7 +20,6 @@ if not CLAUDE_API_KEY:
 MODEL_NAME = Config.MODEL_NAME
 
 chat_manager = ChatManager()
-kb = KnowledgeManager()
 
 
 async def get_user_chats(db: Session, user_id: int, feature: Feature = Feature.GENERAL) -> List[Dict[str, Any]]:
@@ -149,38 +130,6 @@ async def create_new_chat(db: Session, user_id: int, feature: Feature = Feature.
         )
 
 
-async def add_knowledge_base_item(
-    db: Session, question: str, answer: str, image: Optional[UploadFile] = None
-) -> dict:
-    """
-    Menambahkan item baru ke knowledge base.
-
-    Args:
-        db (Session): Sesi repositories SQLAlchemy.
-        question (str): Pertanyaan untuk item knowledge base.
-        answer (str): Jawaban untuk item knowledge base.
-        image (Optional[UploadFile]): File gambar yang diunggah, jika ada.
-
-    Returns:
-        dict: Informasi tentang item knowledge base yang baru ditambahkan.
-
-    Raises:
-        HTTPException: Jika terjadi kesalahan server internal saat menambahkan item ke knowledge base.
-    """
-    try:
-        image_path = None
-        if image:
-            image_path = await save_uploaded_file(image)
-
-        return kb.add_item(db, question, answer, image_path)
-    except Exception as e:
-        logger.error(f"Error adding knowledge base item: {str(e)}")
-        raise HTTPException(
-            status_code=500,
-            detail="Internal server error while adding knowledge base item",
-        )
-
-
 async def update_chat_title(db: Session, chat_id: UUID, title: str) -> bool:
     """
     Memperbarui judul chat.
@@ -254,4 +203,3 @@ async def get_latest_chat_id(db: Session, user_id: int) -> Optional[UUID]:
             status_code=500,
             detail="Internal server error while fetching latest chat ID",
         )
-    

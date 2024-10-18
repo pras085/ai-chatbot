@@ -29,6 +29,7 @@ from app.config.config import Config
 from app.config.database import SessionLocal
 from app.models import models
 from app.repositories.chat_manager import ChatManager
+from app.repositories.context_manager import context_manager
 from app.repositories.knowledge_base_manager import KnowledgeManager
 from app.utils.feature_utils import Feature
 from app.utils.file_utils import save_uploaded_file
@@ -250,7 +251,7 @@ async def chat_with_retry_stream(
                     + f"\n\nInformasi tambahan:\n\n{knowledge_str}"
                 )
 
-                context = kb.get_latest_context(db, user_id)
+                context = context_manager.get_latest_context(db, user_id)
                 logger.info(f"Fetching context for user_id: {user_id}")
                 logger.info(f"DB session: {db}")
                 if context:

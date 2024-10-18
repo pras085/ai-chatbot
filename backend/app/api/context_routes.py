@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.config.database import get_db
 from app.models.models import User
-from app.repositories.knowledge_base_manager import knowledge_manager
+from app.repositories.context_manager import context_manager
 from app.services.auth_service import verify_token
 from app.services.user_service import get_user_by_username
 from app.utils.file_utils import save_uploaded_file
@@ -28,12 +28,12 @@ async def upload_context(
             raise HTTPException(status_code=404, detail="User not found")
 
         if text:
-            context = knowledge_manager.add_context(db, user.id, text, "text")
+            context = context_manager.add_context(db, user.id, text, "text")
         elif file:
             file_path = await save_uploaded_file(file)
             await file.seek(0)
             content = await file.read()
-            context = knowledge_manager.add_context(
+            context = context_manager.add_context(
                 db, user.id, file.filename, "file", content.decode("utf-8", errors="ignore"), file_path
             )
         else:
@@ -59,7 +59,7 @@ async def get_context(
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
 
-        context = knowledge_manager.get_latest_context(db, user.id)
+        context = context_manager.get_latest_context(db, user.id)
         if not context:
             return {"message": "No context found"}
         return {
@@ -83,7 +83,7 @@ async def get_all_contexts(
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
 
-        contexts = knowledge_manager.get_user_contexts(db, user.id)
+        contexts = context_manager.get_user_contexts(db, user.id)
         return [
             {
                 "id": str(c.id),
@@ -108,7 +108,7 @@ async def delete_context(
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
 
-        success = knowledge_manager.delete_context(db, context_id, user.id)
+        success = context_manager.delete_context(db, context_id, user.id)
         if success:
             return {"message": "Context deleted successfully"}
         else:

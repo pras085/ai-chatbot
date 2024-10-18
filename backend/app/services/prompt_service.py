@@ -107,7 +107,7 @@ async def chat_with_retry_stream(
 
             db = SessionLocal()
             try:
-                base_prompt = "Anda adalah asisten AI untuk muatmuat.com, hanya diizinkan menjawab pertanyaan tentang pemrograman, logika pemrograman, serta profil perusahaan muatmuat.com. Pertanyaan di luar topik ini tidak akan dijawab."
+                base_prompt = "Anda adalah asisten AI untuk muatmuat.com, hanya diizinkan menjawab pertanyaan tentang pemrograman, logika pemrograman, serta profil perusahaan muatmuat.com. Pertanyaan di luar topik ini tidak akan dijawab. Anda diizinkan menyajikan gambar yang relevan dengan topik"
 
                 if feature == Feature.GENERAL:
                     system_message = base_prompt + """
@@ -120,7 +120,15 @@ async def chat_with_retry_stream(
                 elif feature == Feature.CODE_CHECK:
                     system_message = base_prompt + """
                     Anda akan mengevaluasi apakah kode sesuai dengan standar perusahaan.
-                    [Tambahkan standar kode perusahaan di sini].
+                    Untuk file javascript
+                    1. nama class harus pascal case.
+                    2. nama fungsi harus camel case
+                    3. semua komponen  berbahasa inggris. 
+                    Untuk file python
+                    1. nama class harus pascal case
+                    2. nama fungsi harus snake case
+                    3. nama variabel harus snake case
+                    4. semua komponen berbahasa inggris
                     Untuk dokumentasi code, arahkan ke fitur Code Helper.
                     Untuk pertanyaan umum, arahkan ke fitur General.
                     Untuk pertanyaan tentang profil perusahaan, arahkan ke fitur CS Chatbot.

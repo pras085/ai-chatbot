@@ -14,7 +14,7 @@ from app import schemas
 from app.api.user_routes import get_current_user
 from app.config.database import get_db
 from app.models.models import User, ChatFile
-from app.services import chat_service
+from app.services import chat_service, prompt_service
 from app.utils.feature_utils import Feature
 
 chat_routes = APIRouter()
@@ -80,7 +80,7 @@ async def send_chat_message(
                 # file_path = await save_uploaded_file(file)
                 # chat_manager.add_file_to_chat(db, chat_id, file.filename, file_path)
 
-        return await chat_service.process_chat_message(
+        return await prompt_service.process_chat_message(
             db,
             user_id,
             chat_id,

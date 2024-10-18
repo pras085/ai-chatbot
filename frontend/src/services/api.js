@@ -88,7 +88,8 @@ export const sendChatMessage = async (
   signal,
   onChunk,
   onDone,
-  onError
+  onError,
+  activeFeature
 ) => {
   const formData = new FormData();
   formData.append("message", message);
@@ -102,7 +103,7 @@ export const sendChatMessage = async (
   console.log("FormData contents:", [...formData.entries()]);
 
   try {
-    const response = await fetch(`${API_BASE_URL}/chat/send`, {
+    const response = await fetch(`${API_BASE_URL}/chat/send?feature=${activeFeature}`, {
       method: "POST",
       body: formData,
       signal,

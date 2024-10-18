@@ -4,6 +4,7 @@ import UserInput from "./UserInput";
 import FileUpload from "./FileUpload";
 import PreviewModal from "./PreviewModal";
 import { sendChatMessage, getChatMessages } from "../services/api";
+import { useFeature } from "../contexts/FeatureContext";
 
 function ChatContainer({ chatId, onBackToList, userId }) {
   const [messages, setMessages] = useState([]);
@@ -13,6 +14,8 @@ function ChatContainer({ chatId, onBackToList, userId }) {
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const abortControllerRef = useRef(null);
+  const { activeFeature } = useFeature();
+
 
   useEffect(() => {
     if (chatId) {
@@ -91,7 +94,8 @@ function ChatContainer({ chatId, onBackToList, userId }) {
             { content: "An error occurred. Please try again.", type: "bot-message" }
           ]);
           setIsGenerating(false);
-        }
+        },
+        activeFeature
       );
     } catch (error) {
       console.error("Failed to send message:", error);

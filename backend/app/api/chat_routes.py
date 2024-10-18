@@ -12,8 +12,8 @@ from starlette.responses import JSONResponse, FileResponse
 
 from app import schemas
 from app.api.user_routes import get_current_user
+from app.config.database import get_db
 from app.models.models import User, ChatFile
-from app.repositories.database import get_db
 from app.services import chat_service
 from app.utils.feature_utils import Feature
 

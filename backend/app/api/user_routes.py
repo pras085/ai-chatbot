@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
 
 import app.services.user_service
-from app.repositories.database import get_db
+from app.config.database import get_db
 from app.services.auth_service import verify_token
 
 user_routes = APIRouter()

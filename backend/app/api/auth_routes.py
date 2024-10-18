@@ -5,8 +5,7 @@ from starlette import status
 
 import app.services.user_service
 from app import schemas
-from app.repositories.database import get_db
-from app.services import chat_service
+from app.config.database import get_db
 from app.services.auth_service import create_access_token, verify_token
 
 auth_routes = APIRouter()

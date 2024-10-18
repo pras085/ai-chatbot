@@ -4,9 +4,9 @@ from uuid import UUID
 from fastapi import Form, UploadFile, File, Depends, HTTPException, APIRouter
 from sqlalchemy.orm import Session
 
+from app.config.database import get_db
 from app.models.models import User
-from app.repositories.database import get_db
-from app.repositories.knowledge_base import knowledge_manager
+from app.repositories.knowledge_base_manager import knowledge_manager
 from app.services.auth_service import verify_token
 from app.services.user_service import get_user_by_username
 from app.utils.file_utils import save_uploaded_file

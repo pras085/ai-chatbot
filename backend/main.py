@@ -8,7 +8,7 @@ from app.api.auth_routes import auth_routes
 from app.api.chat_routes import chat_routes
 from app.api.context_routes import context_routes
 from app.api.user_routes import user_routes
-from app.repositories.database import Base, engine, create_tables
+from app.config.database import engine, Base, create_tables, SessionLocal
 
 # Konfigurasi logging diletakkan di bagian paling atas
 logging.basicConfig(

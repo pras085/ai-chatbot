@@ -13,7 +13,7 @@ from sqlalchemy.orm import relationship, declarative_base
 from sqlalchemy.sql import func
 import uuid
 
-from app.repositories.database import Base
+from app.config.database import Base
 
 
 class BaseModel(Base):

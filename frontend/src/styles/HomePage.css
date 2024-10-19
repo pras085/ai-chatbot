@@ -115,3 +115,9 @@
 .feature-button:hover {
     background-color: #0056b3;
 }
+
+.feature-buttons-container {
+    display: flex;
+    justify-content: space-between; /* Space between buttons */
+    gap: 10px; /* Space between buttons */
+  }

@@ -84,6 +84,29 @@ const HomePage = () => {
               >
                 Start Chat
               </button>
+              <br></br>
+              {feature.featureType === "CODE_CHECK" && (
+                <div className="feature-buttons-container">
+                  <button
+                    onClick={() => handleFeatureClick("CODE_CHECK_FRONTEND")}
+                    className="feature-button"
+                  >
+                    Frontend
+                  </button>
+                  <button
+                    onClick={() => handleFeatureClick("CODE_CHECK_BACKEND")}
+                    className="feature-button"
+                  >
+                    Backend
+                  </button>
+                  <button
+                    onClick={() => handleFeatureClick("CODE_CHECK_APPS")}
+                    className="feature-button"
+                  >
+                    Apps
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         ))}

@@ -1,3 +1,5 @@
+import uuid
+
 from sqlalchemy import (
     Column,
     Integer,
@@ -9,9 +11,8 @@ from sqlalchemy import (
     Index,
 )
 from sqlalchemy.dialects.postgresql import UUID as pgUUID
-from sqlalchemy.orm import relationship, declarative_base
+from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
-import uuid
 
 from app.config.database import Base
 

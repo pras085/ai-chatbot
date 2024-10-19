@@ -1,11 +1,13 @@
-from enum import Enum, auto
-
+from enum import Enum
 
 class Feature(Enum):
     GENERAL = 'GENERAL'
     CODE_CHECK = 'CODE_CHECK'
     CODE_HELPER = 'CODE_HELPER'
     CS_CHATBOT = 'CS_CHATBOT'
+    CODE_CHECK_FRONTEND = 'CODE_CHECK_FRONTEND'
+    CODE_CHECK_BACKEND = 'CODE_CHECK_BACKEND'
+    CODE_CHECK_APPS = 'CODE_CHECK_APPS'
 
     @classmethod
     def from_string(cls, feature_string: str):

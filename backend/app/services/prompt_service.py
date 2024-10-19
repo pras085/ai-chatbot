@@ -11,6 +11,7 @@ from app.repositories.prompt_logs_manager import prompt_logs_manager
 from app.services.new_chat_service import create_new_chat, is_first_message, update_chat_title, chat_manager, \
     get_chat_messages, CLAUDE_API_KEY, MODEL_NAME
 from app.services.knowledge_base_service import logger, kb
+from app.services import code_check_rules_service
 from app.utils.feature_utils import Feature
 
 async def process_chat_message(
@@ -132,6 +133,27 @@ async def chat_with_retry_stream(
                     Untuk dokumentasi code, arahkan ke fitur Code Helper.
                     Untuk pertanyaan umum, arahkan ke fitur General.
                     Untuk pertanyaan tentang profil perusahaan, arahkan ke fitur CS Chatbot.
+                    """
+
+                elif feature == Feature.CODE_CHECK_FRONTEND:
+                    rule = await code_check_rules_service.get_rules_by_type(db, feature)
+                    system_message = base_prompt + f"""
+                    Anda akan mengevaluasi apakah kode sesuai dengan standar perusahaan dengan rules berikut ini.
+                    {rule["rule"]}
+                    """
+
+                elif feature == Feature.CODE_CHECK_BACKEND:
+                    rule = await code_check_rules_service.get_rules_by_type(db, feature)
+                    system_message = base_prompt + f"""
+                    Anda akan mengevaluasi apakah kode sesuai dengan standar perusahaan dengan rules berikut ini.
+                    {rule["rule"]}
+                    """
+
+                elif feature == Feature.CODE_CHECK_APPS:
+                    rule = await code_check_rules_service.get_rules_by_type(db, feature)
+                    system_message = base_prompt + f"""
+                    Anda akan mengevaluasi apakah kode sesuai dengan standar perusahaan dengan rules berikut ini.
+                    {rule["rule"]}
                     """
 
                 elif feature == Feature.CODE_HELPER:

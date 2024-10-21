@@ -41,3 +41,5 @@ public/index.html
 node_modules
 
 .vscode
+
+backend/uploads

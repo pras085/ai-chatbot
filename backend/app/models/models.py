@@ -89,7 +89,7 @@ class ChatFile(Base):
 class KnowledgeBase(Base):
     __tablename__ = "knowledge_base"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(pgUUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
     question = Column(Text, nullable=False)
     answer = Column(Text, nullable=False)
 

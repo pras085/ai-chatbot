@@ -311,3 +311,19 @@ export const login = async (username, password) => {
   localStorage.setItem("token", data.access_token);
   return data;
 };
+
+export const fetchAllRules = async () => {
+  const response = await apiRequest("/code-check-rules");
+  const data = await response.json();
+  return data;
+};
+
+export const updateRule = async (feature, rule) => {
+  const response = await apiRequest(`/code-check-rules/${feature}`, {
+    method: "PUT",
+    body: {
+      'rule': rule
+    },
+  });
+  return response.json();
+}

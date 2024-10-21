@@ -5,6 +5,7 @@ import useUser from './hooks/useUser';
 import { FeatureProvider } from "./contexts/FeatureContext";
 import "./styles/App.css";
 import "highlight.js/styles/sunburst.css";
+import AdminPage from "./pages/AdminPage";
 
 const LoginPage = lazy(() => import("./pages/LoginPage"));
 const HomePage = lazy(() => import("./pages/HomePage"));
@@ -66,6 +67,11 @@ function App() {
                   <Route path="/chat/:chatId" element={
                     <PrivateRoute>
                       <ChatPage />
+                    </PrivateRoute>
+                  } />
+                  <Route path="/admin" element={
+                    <PrivateRoute>
+                      <AdminPage />
                     </PrivateRoute>
                   } />
                   <Route path="/" element={<Navigate to="/home" replace />} />

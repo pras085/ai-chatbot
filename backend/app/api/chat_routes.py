@@ -1,7 +1,9 @@
 import logging
 import os
+from datetime import datetime
 from typing import List, Dict, Any
 from uuid import UUID
+from zipfile import ZipFile
 
 from fastapi import Depends, HTTPException, Form, UploadFile, File, APIRouter
 from fastapi.encoders import jsonable_encoder
@@ -70,18 +72,33 @@ async def send_chat_message(
 ):
     try:
         file_contents = []
-        if files:
-            for file in files:
-                content = await file.read()
-                file_contents.append(
-                    {
-                        "name": file.filename,
-                        "content": content.decode("utf-8", errors="ignore"),
-                    }
-                )
-                # Simpan file jika diperlukan
-                # file_path = await save_uploaded_file(file)
-                # chat_manager.add_file_to_chat(db, chat_id, file.filename, file_path)
+        if len(files) == 1 and files[0].filename.__contains__(".zip"):
+            # unzip file
+            with ZipFile(files[0].file, 'r') as zipObj:
+                # Extract all the contents of zip file in current directory
+                zipObj.extractall(path=f"uploads/{chat_id}/{datetime.now().strftime('%Y-%m-%d-%H-%M-%S')}")
+
+                for file in zipObj.namelist():
+                    content = zipObj.read(file)
+                    file_contents.append(
+                        {
+                            "name": file,
+                            "content": content.decode("utf-8", errors="ignore"),
+                        }
+                    )
+        else:
+            if files:
+                for file in files:
+                    content = await file.read()
+                    file_contents.append(
+                        {
+                            "name": file.filename,
+                            "content": content.decode("utf-8", errors="ignore"),
+                        }
+                    )
+                    # Simpan file jika diperlukan
+                    # file_path = await save_uploaded_file(file)
+                    # chat_manager.add_file_to_chat(db, chat_id, file.filename, file_path)
 
         return await prompt_service.process_chat_message(
             db,

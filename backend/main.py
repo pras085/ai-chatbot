@@ -9,6 +9,7 @@ from app.api.auth_routes import auth_routes
 from app.api.chat_routes import chat_routes
 from app.api.code_check_rules_routes import code_check_rules_routes
 from app.api.context_routes import context_routes
+from app.api.file_routes import file_routes
 from app.api.user_routes import user_routes
 from app.config.database import engine, Base, create_tables
 
@@ -46,6 +47,7 @@ app.include_router(user_routes, tags=["User Routes"])
 app.include_router(chat_routes, tags=["Chat Routes"])
 app.include_router(context_routes, tags=["Context Routes"])
 app.include_router(code_check_rules_routes, tags=["Code Check Rules Routes"])
+app.include_router(file_routes, tags=["File Routes"])
 
 create_tables()
 

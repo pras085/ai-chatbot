@@ -205,10 +205,10 @@ async def chat_with_retry_stream(
                 Kamu tetap harus meyakinkan user bahwa kamu masih bisa menjawab pertanyaan lain"""
 
                 # Menambahkan konteks dari file
-                if file_contents:
-                    system_message += "\n\nAttached files content:\n"
-                    for file in file_contents:
-                        system_message += f"\nFile: {file['name']}\nContent:\n{file['content'][:1000]}...\n"
+                # if file_contents:
+                #     system_message += "\n\nAttached files content:\n"
+                #     for file in file_contents:
+                #         system_message += f"\nFile: {file['name']}\nContent:\n{file['content'][:1000]}...\n"
 
                 # Building messages
                 messages = prepare_messages(chat_history, message, file_contents)

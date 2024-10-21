@@ -33,6 +33,7 @@ __pycache__/
 
 # Compiled Python files
 *.pyc
+*.py~
 
 public/
 public/index.html
@@ -41,5 +42,7 @@ public/index.html
 node_modules
 
 .vscode
+.idea
+uploads
 
 backend/uploads

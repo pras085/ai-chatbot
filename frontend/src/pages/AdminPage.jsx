@@ -18,9 +18,8 @@ function AdminPage() {
     }, []);
     
     return <>
-        <h1>Admin Page</h1>
         <div className="container" style={{ textAlign: "center" }}>
-            <h2>Code Check Rules</h2>
+            <h2 className="text-3xl font-semibold">Code Check Rules</h2>
             <RulesList data={rules}/>
         </div>
     </>;

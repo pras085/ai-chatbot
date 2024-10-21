@@ -57,6 +57,8 @@ export const allowedExtensions = [
   "go",
   "ts",
   "dart",
+  // Compressed zip
+  "zip",
 ];
 
 export function isAllowedFileType(file) {
@@ -76,6 +78,8 @@ export function isAllowedFileType(file) {
     "text/x-python",
     "text/x-java",
     "text/x-c++src",
+    // zip
+    "application/zip",
   ];
 
   const fileExtension = file.name.split(".").pop().toLowerCase();

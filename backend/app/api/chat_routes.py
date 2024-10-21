@@ -72,7 +72,7 @@ async def send_chat_message(
 ):
     try:
         file_contents = []
-        if len(files) == 1 and files[0].filename.__contains__(".zip"):
+        if files is not None and len(files) == 1 and files[0].filename.__contains__(".zip"):
             # unzip file
             with ZipFile(files[0].file, 'r') as zipObj:
                 # Extract all the contents of zip file in current directory

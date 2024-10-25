@@ -100,13 +100,14 @@ const HomePage = () => {
             </div>
             <div className="feature-content">
               <p className="feature-description">{feature.description}</p>
-              <button
-                onClick={() => handleFeatureClick(feature.featureType)}
-                className="feature-button"
-              >
-                Start Chat
-              </button>
-              <br></br>
+              {feature.featureType !== 'CODE_CHECK' && (
+                <button
+                  onClick={() => handleFeatureClick(feature.featureType)}
+                  className="feature-button"
+                >
+                  Start Chat
+                </button> 
+              )}
               {feature.featureType === "CODE_CHECK" && (
                 <div className="feature-buttons-container">
                   <button

@@ -8,6 +8,7 @@ import ProductInformation from "../components/ProductInformation";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChevronLeft, faChevronRight } from "@fortawesome/free-solid-svg-icons";
 import { useFeature } from '../contexts/FeatureContext';
+import CodeCheckDetail from "../components/CodeCheckDetail";
 
 function ChatListPage() {
   const navigate = useNavigate();
@@ -106,7 +107,10 @@ function ChatListPage() {
 
   return (
     <div className="flex h-screen justify-end overflow-hidden">
-      <div className={`flex-1 max-w-3xl p-5 transition-all duration-300 ease-in-out ${!showProductInfo ? 'max-w-full justify-center flex' : ''}`}>
+      <div className={`flex-1 max-w-2xl p-5 pt-10 transition-all duration-300 ease-in-out ${!showProductInfo ? 'max-w-full justify-center flex' : ''}`}>
+        {activeFeature.includes("CODE_CHECK") && <CodeCheckDetail feature={activeFeature}/>}
+      </div>
+      <div className={`flex-1 max-w-2xl p-5 transition-all duration-300 ease-in-out ${!showProductInfo ? 'max-w-full justify-center flex' : ''}`}>
         <ChatList
           chats={chats}
           onSelectChat={handleSelectChat}

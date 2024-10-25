@@ -330,6 +330,11 @@ export const updateRule = async (feature, rule) => {
   return response.json();
 }
 
+export const getRuleByFeature = async (feature) => {
+  const response = await apiRequest(`/code-check-rules/${feature}`);
+  return response.json();
+}
+
 export const fetchAllKnowledges = async () => {
   const response = await apiRequest("/knowledge-base");
   const data = await response.json();

@@ -340,3 +340,17 @@ export const createKnowledge = async (question, answer) => {
   });
   return response.json();
 }
+
+export const deleteKnowledge = async (id) => {
+  const response = await apiRequest(`/knowledge-base/${id}`, {
+    method: "DELETE"
+  });
+  return response.json();
+}
+
+export const updateKnowledge = async (id, question, answer) => {
+  const response = await apiRequest(`/knowledge-base/${id}?question=${question}&answer=${answer}`, {
+    method: "PUT"
+  });
+  return response.json();
+}

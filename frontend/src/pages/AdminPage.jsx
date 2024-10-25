@@ -7,6 +7,7 @@ import KnowledgeBaseList from "../components/KnowledgeBaseList";
 function AdminPage() {
     const [rules, setRules] = useState([]);
     const [knowledges, setKnowledgeBase] = useState([]);
+    const [isReloading, setIsReloading] = useState(false);
 
     useEffect(() => {
         // wrap fetchRules async to separate function
@@ -24,7 +25,9 @@ function AdminPage() {
         
         fetchRules();
         fetchKnowledges();
-    }, []);
+
+        setIsReloading(false);
+    }, [isReloading]);
     
     return <>
         <div className="w-full p-8" style={{ textAlign: "center" }}>
@@ -32,7 +35,7 @@ function AdminPage() {
             <RulesList data={rules}/>
 
             <h2 className="text-3xl font-semibold mt-10">Knowledge Base</h2>
-            <KnowledgeBaseList knowledges={knowledges} />
+            <KnowledgeBaseList knowledges={knowledges} setIsReloading={setIsReloading}/>
         </div>
     </>;
 }

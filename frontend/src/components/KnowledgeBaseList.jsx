@@ -1,21 +1,20 @@
 import React, { useState } from 'react';
-import { createKnowledge } from '../services/api';
+import { createKnowledge, deleteKnowledge } from '../services/api';
 
-const Modal = ({isOpen, toggleModal}) => {
+const Modal = ({isOpen, toggleModal, setIsReloading}) => {
   const [question, setQuestion] = useState('');
   const [answer, setAnswer] = useState('');
 
   const handleSubmit = (event) => {
     const create = async () => {
       const result = await createKnowledge(question, answer);
-      if(result.status === 200) {
-        alert('Success');
-        // Reset form
-        setQuestion('');
-        setAnswer('');
-        // Tutup modal
-        toggleModal();
-      }
+      alert('Success');
+      // Reset form
+      setQuestion('');
+      setAnswer('');
+      // Tutup modal
+      toggleModal();
+      setIsReloading(true);
     }
     event.preventDefault();
     if (question && answer) {
@@ -84,11 +83,22 @@ const Modal = ({isOpen, toggleModal}) => {
     );
   };  
 
-const KnowledgeBaseList = ({knowledges}) => {
+const KnowledgeBaseList = ({knowledges, setIsReloading}) => {
     const [isOpen, setIsOpen] = useState(false);
+
+    const handleDelete = (id) => {
+      const deleteKnowledgeById = async () => {
+        const response = await deleteKnowledge(id);
+        console.log(response);
+        alert('Success');
+        setIsReloading(true);
+      }
+
+      deleteKnowledgeById();
+    }
     return (
         <>
-            <Modal isOpen={isOpen} toggleModal={() => setIsOpen(false)}/>
+            <Modal isOpen={isOpen} toggleModal={() => setIsOpen(false)} setIsReloading={setIsReloading}/>
             <div className="flex mt-1 justify-end">
                 <button className="bg-green-500 text-white px-4 py-1 rounded" onClick={() => setIsOpen(true)}>Create</button>
             </div>
@@ -111,7 +121,7 @@ const KnowledgeBaseList = ({knowledges}) => {
                         <td className="border border-gray-300 px-4 py-2">
                             <div style={{ display: 'flex' , flexDirection: 'row'}}>
                                 <button className="bg-blue-500 text-white px-4 py-1 rounded mr-2" onClick={() => alert('ok')}>Edit</button>
-                                <button className="bg-red-500 text-white px-4 py-1 rounded mr-2" onClick={() => alert('ok')}>Delete</button>
+                                <button className="bg-red-500 text-white px-4 py-1 rounded mr-2" onClick={() => handleDelete(knowledge.id)}>Delete</button>
                             </div>
                         </td>
                     </tr>

@@ -7,11 +7,20 @@ import {
   faCheck,
   faHeadset,
   faSignOutAlt,
+  faGear,
 } from "@fortawesome/free-solid-svg-icons";
 import "../styles/HomePage.css";
 import { ReactComponent as MuatmuatIcon } from "../assets/logo-muatmuat.svg";
 import { apiRequest } from "../services/api";
 import { useFeature } from "../contexts/FeatureContext";
+
+const Greeting = ({ name = "User" }) => {
+  return (
+    <header style={{padding: '10px', textAlign: 'center'}}>
+      <h1 style={{color: '#333', fontSize: '24px', margin: '0'}}>Selamat Datang, {name}!</h1>
+    </header>
+  );
+};
 
 const HomePage = () => {
   const navigate = useNavigate();
@@ -63,10 +72,21 @@ const HomePage = () => {
     }
   };
 
+  const handleSettigsClick = () => {
+    navigate("/admin");
+  }
+
   return (
     <div className="home-container">
+      <Greeting name={localStorage.getItem("username")} />
       <div className="header">
         <MuatmuatIcon className="home-title" />
+        {
+          localStorage.getItem("username") === "superadmin" && 
+          <button onClick={handleSettigsClick} >
+            <FontAwesomeIcon icon={faGear} /> Setting
+          </button>
+        }
         <button onClick={handleLogout} className="logout-button">
           <FontAwesomeIcon icon={faSignOutAlt} /> Logout
         </button>

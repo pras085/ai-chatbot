@@ -35,7 +35,7 @@ const ProductInformation = ({ contexts, onContextUpdate, onContextDelete }) => {
 
     return (
         <div className="product-information p-4 bg-white shadow-md rounded-lg">
-            <h2 className="text-xl font-semibold mb-4">Product Information</h2>
+            <h2 className="text-xl font-semibold mb-4">Active Contexts</h2>
             <div className="current-contexts mb-6">
                 <h3 className="text-lg font-semibold mb-2">Current Contexts:</h3>
                 {renderContexts()}

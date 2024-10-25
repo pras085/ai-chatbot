@@ -2,14 +2,22 @@ import React, { useState, useEffect } from "react";
 import RulesList from "../components/RulesList";
 import { fetchAllRules, fetchAllKnowledges } from "../services/api";
 import KnowledgeBaseList from "../components/KnowledgeBaseList";
+import { useNavigate } from "react-router-dom";
 
 
 function AdminPage() {
     const [rules, setRules] = useState([]);
     const [knowledges, setKnowledgeBase] = useState([]);
     const [isReloading, setIsReloading] = useState(false);
+    const navigate = useNavigate();
+
 
     useEffect(() => {
+        // check username
+        if (localStorage.getItem("username") !== "superadmin") {
+            navigate("/")
+        }
+        
         // wrap fetchRules async to separate function
         const fetchRules = async () => {
             const data = await fetchAllRules();
@@ -27,7 +35,7 @@ function AdminPage() {
         fetchKnowledges();
 
         setIsReloading(false);
-    }, [isReloading]);
+    }, [isReloading, navigate]);
     
     return <>
         <div className="w-full p-8" style={{ textAlign: "center" }}>

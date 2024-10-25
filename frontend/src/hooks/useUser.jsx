@@ -17,6 +17,7 @@ export function useUser() {
         // Hapus token jika ada masalah autentikasi
         if (err.message === "Unauthorized") {
           localStorage.removeItem("token");
+          localStorage.removeItem("username");
         }
       } finally {
         setLoading(false);

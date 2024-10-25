@@ -53,10 +53,12 @@ const HomePage = () => {
     try {
       await apiRequest("/logout", { method: "POST" });
       localStorage.removeItem("token");
+      localStorage.removeItem("username");
       navigate("/login");
     } catch (error) {
       console.error("Logout failed:", error);
       localStorage.removeItem("token");
+      localStorage.removeItem("username");
       navigate("/login");
     }
   };

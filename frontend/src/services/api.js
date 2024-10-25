@@ -39,6 +39,7 @@ export const apiRequest = async (endpoint, options = {}) => {
 
     if (response.status === 401 && requiresAuth) {
       localStorage.removeItem("token");
+      localStorage.removeItem("username");
       window.location.href = "/login";
       throw new Error("Authentication failed");
     }
@@ -309,6 +310,7 @@ export const login = async (username, password) => {
 
   const data = await response.json();
   localStorage.setItem("token", data.access_token);
+  localStorage.setItem("username", username);
   return data;
 };
 

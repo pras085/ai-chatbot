@@ -127,11 +127,13 @@ function ChatListPage() {
           <FontAwesomeIcon icon={showProductInfo ? faChevronRight : faChevronLeft} />
         </button>
         <div className={`h-full w-96 p-5 bg-white shadow-md overflow-y-auto transition-transform duration-300 ease-in-out ${showProductInfo ? '' : 'translate-x-full'}`}>
-          <ProductInformation
-            contexts={contexts}
-            onContextUpdate={handleContextUpdate}
-            onContextDelete={handleDeleteContext}
-          />
+          {activeFeature === "GENERAL" && (
+            <ProductInformation
+              contexts={contexts}
+              onContextUpdate={handleContextUpdate}
+              onContextDelete={handleDeleteContext}
+            />
+          )}
         </div>
       </div>
     </div>

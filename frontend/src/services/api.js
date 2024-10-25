@@ -327,3 +327,16 @@ export const updateRule = async (feature, rule) => {
   });
   return response.json();
 }
+
+export const fetchAllKnowledges = async () => {
+  const response = await apiRequest("/knowledge-base");
+  const data = await response.json();
+  return data;
+}
+
+export const createKnowledge = async (question, answer) => {
+  const response = await apiRequest(`/knowledge-base?question=${question}&answer=${answer}`, {
+    method: "POST"
+  });
+  return response.json();
+}

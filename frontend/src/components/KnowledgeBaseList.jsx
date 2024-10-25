@@ -1,14 +1,37 @@
-import React, { useState } from 'react';
-import { createKnowledge, deleteKnowledge } from '../services/api';
+import React, { useEffect, useState } from 'react';
+import { createKnowledge, deleteKnowledge, getKnowledgeById, updateKnowledge } from '../services/api';
 
-const Modal = ({isOpen, toggleModal, setIsReloading}) => {
+const Modal = ({isOpen, toggleModal, setIsReloading, action = 'create', id = null}) => {
   const [question, setQuestion] = useState('');
   const [answer, setAnswer] = useState('');
 
+  const fetchKnowledgeById = (id) => {
+    const getKnowledge = async () => {
+      const response = await getKnowledgeById(id);
+      setQuestion(response.question);
+      setAnswer(response.answer);
+    }
+
+    getKnowledge();
+  }
+
+  useEffect(() => {
+    if (isOpen) {
+      if (action === 'update') {
+        fetchKnowledgeById(id);
+      }
+    }
+  }, [action, id]);
+
   const handleSubmit = (event) => {
+    const update = async () => {
+      const result = await updateKnowledge(id, question, answer); 
+      // Tutup modal
+      toggleModal();
+      setIsReloading(true);
+    }
     const create = async () => {
       const result = await createKnowledge(question, answer);
-      alert('Success');
       // Reset form
       setQuestion('');
       setAnswer('');
@@ -18,7 +41,12 @@ const Modal = ({isOpen, toggleModal, setIsReloading}) => {
     }
     event.preventDefault();
     if (question && answer) {
-      create();
+      if (action === 'update') {
+        update();
+      }
+      else if (action === 'create') {
+        create();
+      }
     } else {
       alert('Error creating knowledge');  
     }
@@ -85,20 +113,27 @@ const Modal = ({isOpen, toggleModal, setIsReloading}) => {
 
 const KnowledgeBaseList = ({knowledges, setIsReloading}) => {
     const [isOpen, setIsOpen] = useState(false);
+    const [modalAction, setModalAction] = useState('create');
+    const [modalId, setModalId] = useState(null);
 
     const handleDelete = (id) => {
       const deleteKnowledgeById = async () => {
         const response = await deleteKnowledge(id);
         console.log(response);
-        alert('Success');
         setIsReloading(true);
       }
 
       deleteKnowledgeById();
     }
+
+    const handleEdit = (id) => {
+      setModalAction('update');
+      setModalId(id);
+      setIsOpen(true);
+    }
     return (
         <>
-            <Modal isOpen={isOpen} toggleModal={() => setIsOpen(false)} setIsReloading={setIsReloading}/>
+            <Modal isOpen={isOpen} toggleModal={() => setIsOpen(false)} setIsReloading={setIsReloading} action={modalAction} id={modalId}/>
             <div className="flex mt-1 justify-end">
                 <button className="bg-green-500 text-white px-4 py-1 rounded" onClick={() => setIsOpen(true)}>Create</button>
             </div>
@@ -120,7 +155,7 @@ const KnowledgeBaseList = ({knowledges, setIsReloading}) => {
                         <td className="border border-gray-300 px-4 py-2 text-left">{knowledge.answer}</td>
                         <td className="border border-gray-300 px-4 py-2">
                             <div style={{ display: 'flex' , flexDirection: 'row'}}>
-                                <button className="bg-blue-500 text-white px-4 py-1 rounded mr-2" onClick={() => alert('ok')}>Edit</button>
+                                <button className="bg-blue-500 text-white px-4 py-1 rounded mr-2" onClick={() => handleEdit(knowledge.id)}>Edit</button>
                                 <button className="bg-red-500 text-white px-4 py-1 rounded mr-2" onClick={() => handleDelete(knowledge.id)}>Delete</button>
                             </div>
                         </td>

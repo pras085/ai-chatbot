@@ -354,3 +354,8 @@ export const updateKnowledge = async (id, question, answer) => {
   });
   return response.json();
 }
+
+export const getKnowledgeById = async (id) => {
+  const response = await apiRequest(`/knowledge-base/${id}`);
+  return response.json();
+}

@@ -81,7 +81,7 @@ const RulesList = ({ data = [] }) => {
         <>
             <Modal isOpen={isOpen} toggleModal={() => setIsOpen(false)} feature={selectedFeature} rule={selectedRule} onChangeRule={setSelectedRule} saveUpdate={handleUpdate}/>
             <div className="flex justify-center mt-10">
-                <table className="table-auto border-collapse border border-gray-200">
+                <table className="table-auto border-collapse border border-gray-200 w-full">
                 <thead>
                     <tr>
                     <th className="border border-gray-300 px-4 py-2">No</th>

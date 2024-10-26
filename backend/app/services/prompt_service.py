@@ -117,19 +117,24 @@ async def chat_with_retry_stream(
                     Untuk dokumentasi code, arahkan ke fitur Code Helper.
                     Untuk pertanyaan produk dan profil muatmuat.com, arahkan ke fitur CS Chatbot.
                     """
+                    # contexts are applied for all features
+                    context = context_manager.get_latest_context(db, user_id)
+                    logger.info(f"Fetching context for user_id: {user_id}")
+                    logger.info(f"DB session: {db}")
+                    if context:
+                        system_message += f"\n\nBerikut ini adalah konteks tambahan:"
+                        for c in context:
+                            if c.content_type == "text":
+                                system_message += f"\n{c.content}"
+                            elif c.content_type == "file":
+                                system_message += (
+                                    f"\n\nBerikut ini adalah konteks tambahan dari file: \n{c.content_raw}"
+                                )
+                    system_message += "\n Apabila terdapat konteks, jawab pertanyaan sesuai masing-masing konteks yang disertakan. Hindari jawaban diluar konteks."
 
                 elif feature == Feature.CODE_CHECK:
                     system_message = base_prompt + """
                     Anda akan mengevaluasi apakah kode sesuai dengan standar perusahaan.
-                    Untuk file javascript
-                    1. nama class harus pascal case.
-                    2. nama fungsi harus camel case
-                    3. semua komponen  berbahasa inggris. 
-                    Untuk file python
-                    1. nama class harus pascal case
-                    2. nama fungsi harus snake case
-                    3. nama variabel harus snake case
-                    4. semua komponen berbahasa inggris
                     Untuk dokumentasi code, arahkan ke fitur Code Helper.
                     Untuk pertanyaan umum, arahkan ke fitur General.
                     Untuk pertanyaan tentang profil perusahaan, arahkan ke fitur CS Chatbot.
@@ -179,20 +184,6 @@ async def chat_with_retry_stream(
 
                 else:
                     raise ValueError(f"Invalid feature: {feature}")
-
-                # contexts are applied for all features
-                context = context_manager.get_latest_context(db, user_id)
-                logger.info(f"Fetching context for user_id: {user_id}")
-                logger.info(f"DB session: {db}")
-                if context:
-                    system_message += f"\n\nBerikut ini adalah konteks tambahan:"
-                    for c in context:
-                        if c.content_type == "text":
-                            system_message += f"\n{c.content}"
-                        elif c.content_type == "file":
-                            system_message += (
-                                f"\n\nBerikut ini adalah konteks tambahan dari file: \n{c.content_raw}"
-                            )
 
                 # Menambahkan file_contents ke dalam pesan jika ada
                 if file_contents:

@@ -44,6 +44,8 @@ async def process_chat_message(
                     db, chat_id, placeholder_response, is_user=False
                 )
 
+            chat_manager.add_message(db, chat_id, message, is_user=True)
+
             # Menambahkan informasi file ke pesan chat
             if file_contents:
                 for file in file_contents:
@@ -130,7 +132,7 @@ async def chat_with_retry_stream(
                                 system_message += (
                                     f"\n\nBerikut ini adalah konteks tambahan dari file: \n{c.content_raw}"
                                 )
-                    system_message += "\n Apabila terdapat konteks, jawab pertanyaan sesuai masing-masing konteks yang disertakan. Hindari jawaban diluar konteks."
+                    system_message += "\n Apabila terdapat konteks, jawab pertanyaan sesuai masing-masing konteks yang disertakan. Konteks adalah batasan anda dalam menjawab pertanyaan"
 
                 elif feature == Feature.CODE_CHECK:
                     system_message = base_prompt + """

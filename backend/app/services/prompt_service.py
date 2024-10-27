@@ -146,6 +146,7 @@ async def chat_with_retry_stream(
                     rule = await code_check_rules_service.get_rules_by_type(db, feature)
                     system_message = base_prompt + f"""
                     Anda akan mengevaluasi apakah kode sesuai dengan standar perusahaan dengan rules berikut ini.
+                    Anda harus menunjukkan perbaikan kode yang seharusnya.
                     {rule["rule"]}
                     """
 
@@ -153,6 +154,7 @@ async def chat_with_retry_stream(
                     rule = await code_check_rules_service.get_rules_by_type(db, feature)
                     system_message = base_prompt + f"""
                     Anda akan mengevaluasi apakah kode sesuai dengan standar perusahaan dengan rules berikut ini.
+                    Anda harus menunjukkan perbaikan kode yang seharusnya.
                     {rule["rule"]}
                     """
 
@@ -160,6 +162,7 @@ async def chat_with_retry_stream(
                     rule = await code_check_rules_service.get_rules_by_type(db, feature)
                     system_message = base_prompt + f"""
                     Anda akan mengevaluasi apakah kode sesuai dengan standar perusahaan dengan rules berikut ini.
+                    Anda harus menunjukkan perbaikan kode yang seharusnya.
                     {rule["rule"]}
                     """
 

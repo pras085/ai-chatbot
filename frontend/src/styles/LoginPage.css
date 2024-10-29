@@ -38,7 +38,7 @@
     font-size: 14px;
 }
 
-button {
+.button-login {
     width: 100%;
     padding: 10px;
     background-color: #007bff;

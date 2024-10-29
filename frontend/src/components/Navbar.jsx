@@ -64,11 +64,11 @@ const NavigationBar = () => {
 
           {/* Navigation Links */}
           <div className="flex items-center space-x-6">
-            <a href="#" className="text-blue-600 font-medium border-b-2 border-blue-600 py-4">
+            <a href="/home" className={location.pathname === '/home' ? 'text-blue-600 font-medium border-b-2 border-blue-600 py-4': 'text-gray-600 hover:text-gray-900 py-4'}>
               Home
             </a>
-            <a href="#" className="text-gray-600 hover:text-gray-900 py-4">
-              Dashboard
+            <a href="/admin" className={location.pathname === '/admin' ? 'text-blue-600 font-medium border-b-2 border-blue-600 py-4': 'text-gray-600 hover:text-gray-900 py-4'}>
+              Administrator
             </a>
           </div>
         </div>

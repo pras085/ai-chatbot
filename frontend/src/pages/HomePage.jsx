@@ -80,12 +80,12 @@ const HomePage = () => {
     <div className="home-container">
       <div className="header">
         {/* <MuatmuatIcon className="home-title" /> */}
-        {
+        {/* {
           localStorage.getItem("username") === "superadmin" && 
           <button onClick={handleSettigsClick} >
             <FontAwesomeIcon icon={faGear} /> Setting
           </button>
-        }
+        } */}
         {/* <button onClick={handleLogout} className="logout-button">
           <FontAwesomeIcon icon={faSignOutAlt} /> Logout
         </button> */}

@@ -8,7 +8,7 @@ class UserBase(BaseModel):
     username: str
 
 
-class UserCreate(UserBase):
+class UserCreateUpdate(UserBase):
     password: str
 
 

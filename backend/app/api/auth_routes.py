@@ -38,7 +38,7 @@ async def logout(
 
 @auth_routes.post("/register", response_model=schemas.User)
 async def register(
-        user: schemas.UserCreate,
+        user: schemas.UserCreateUpdate,
         db: Session = Depends(get_db)
 ):
     db_user = await app.services.user_service.get_user_by_username(db, user.username)

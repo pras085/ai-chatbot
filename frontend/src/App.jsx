@@ -6,6 +6,7 @@ import { FeatureProvider } from "./contexts/FeatureContext";
 import "./styles/App.css";
 import "highlight.js/styles/sunburst.css";
 import AdminPage from "./pages/AdminPage";
+import FloatingHomeButton from "./components/FloatingHomeButton";
 
 const LoginPage = lazy(() => import("./pages/LoginPage"));
 const HomePage = lazy(() => import("./pages/HomePage"));
@@ -77,6 +78,7 @@ function App() {
                   <Route path="/" element={<Navigate to="/home" replace />} />
                   <Route path="*" element={<Navigate to="/home" replace />} />
                 </Routes>
+                <FloatingHomeButton />
               </main>
             </div>
           </FeatureProvider>

@@ -7,6 +7,7 @@ import "./styles/App.css";
 import "highlight.js/styles/sunburst.css";
 import AdminPage from "./pages/AdminPage";
 import FloatingHomeButton from "./components/FloatingHomeButton";
+import NavigationBar from "./components/Navbar";
 
 const LoginPage = lazy(() => import("./pages/LoginPage"));
 const HomePage = lazy(() => import("./pages/HomePage"));
@@ -49,6 +50,7 @@ function App() {
           <FeatureProvider>
             <div className="App">
               <main>
+                <NavigationBar />
                 <Routes>
                   <Route path="/login" element={
                     <PublicRoute>

@@ -78,18 +78,17 @@ const HomePage = () => {
 
   return (
     <div className="home-container">
-      <Greeting name={localStorage.getItem("username")} />
       <div className="header">
-        <MuatmuatIcon className="home-title" />
+        {/* <MuatmuatIcon className="home-title" /> */}
         {
           localStorage.getItem("username") === "superadmin" && 
           <button onClick={handleSettigsClick} >
             <FontAwesomeIcon icon={faGear} /> Setting
           </button>
         }
-        <button onClick={handleLogout} className="logout-button">
+        {/* <button onClick={handleLogout} className="logout-button">
           <FontAwesomeIcon icon={faSignOutAlt} /> Logout
-        </button>
+        </button> */}
       </div>
       <div className="feature-grid">
         {features.map((feature, index) => (

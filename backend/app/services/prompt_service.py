@@ -110,7 +110,7 @@ async def chat_with_retry_stream(
 
             db = SessionLocal()
             try:
-                base_prompt = "Anda adalah asisten AI untuk muatmuat.com, hanya diizinkan menjawab pertanyaan tentang pemrograman, logika pemrograman, serta profil perusahaan muatmuat.com. Pertanyaan di luar topik ini tidak akan dijawab. Bahasa jawaban disesuaikan dengan bahasa pengguna."
+                base_prompt = "Anda adalah asisten AI untuk muatmuat.com, hanya diizinkan menjawab pertanyaan tentang pemrograman, logika pemrograman, serta profil perusahaan muatmuat.com. Pertanyaan di luar topik ini tidak akan dijawab. Bahasa jawaban disesuaikan dengan bahasa pengguna. Jawab pertanyaan se efektif mungkin."
 
                 if feature == Feature.GENERAL:
                     system_message = base_prompt + """

@@ -3,6 +3,27 @@ import { Bell } from 'lucide-react';
 import { ReactComponent as MuatmuatIcon } from "../assets/logo-muatmuat.svg";
 import { useNavigate } from 'react-router-dom';
 
+// Avatar Component
+const Avatar = () => {
+    const name = localStorage.getItem('username');
+    const getInitials = (name) => {
+      return name
+        .split(' ')
+        .map(word => word[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 2);
+    };
+  
+    return (
+      <div 
+        className="w-8 h-8 rounded-full flex items-center justify-center bg-[#007bff] text-white font-medium text-sm"
+      >
+        {getInitials(name || 'User Name')}
+      </div>
+    );
+  };
+
 const NavigationBar = () => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const navigate = useNavigate();
@@ -68,11 +89,12 @@ const NavigationBar = () => {
               onClick={() => toggleDropdown()}
               className="flex items-center space-x-2"
             >
-              <img
+              {/* <img
                 src="/api/placeholder/32/32"
                 alt="Profile"
                 className="w-8 h-8 rounded-full"
-              />
+              /> */}
+              <Avatar />
             </button>
 
             {/* Dropdown Menu */}

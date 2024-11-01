@@ -42,7 +42,7 @@ const ChatList = ({ chats, onSelectChat, onNewChat, onDeleteChat, userId }) => {
           onClick={handleCreateNewChat}
           disabled={isCreatingChat}
         >
-          {isCreatingChat ? "Creating..." : `Create New Chat ${activeFeature}`}
+          {isCreatingChat ? "Creating..." : `Create New Chat ${activeFeature.replace(/_/g, " ")}`}
         </button>
 
         <ul className="list-none p-0 m-0 flex-grow overflow-y-auto mt-4">

@@ -80,7 +80,7 @@ function App() {
                   <Route path="/" element={<Navigate to="/home" replace />} />
                   <Route path="*" element={<Navigate to="/home" replace />} />
                 </Routes>
-                <FloatingHomeButton />
+                {/* <FloatingHomeButton /> */}
               </main>
             </div>
           </FeatureProvider>

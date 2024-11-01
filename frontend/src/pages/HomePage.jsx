@@ -7,7 +7,9 @@ import {
   faCheck,
   faHeadset,
   faSignOutAlt,
+  faFile,
   faGear,
+  faSpellCheck,
 } from "@fortawesome/free-solid-svg-icons";
 import "../styles/HomePage.css";
 import { ReactComponent as MuatmuatIcon } from "../assets/logo-muatmuat.svg";
@@ -50,6 +52,17 @@ const HomePage = () => {
       description: "Menjawab pertanyaan terkait produk perusahaan.",
       icon: <FontAwesomeIcon icon={faHeadset} size="2x" className="feature-icon" />,
       featureType: "CS_CHATBOT",
+    },{
+      title: "Document Checking",
+      description: "Membantu untuk melakukan review dokumen.",
+      icon: <FontAwesomeIcon icon={faFile} size="2x" className="feature-icon" />,
+      featureType: "DOCUMENT_CHECKING",
+    },
+    ,{
+      title: "Quick Code Checking",
+      description: "Membantu untuk melakukan review dokumen.",
+      icon: <FontAwesomeIcon icon={faSpellCheck} size="2x" className="feature-icon" />,
+      featureType: "CODE_CHECK",
     },
   ];
 
@@ -90,7 +103,11 @@ const HomePage = () => {
           <FontAwesomeIcon icon={faSignOutAlt} /> Logout
         </button> */}
       </div>
-      <div className="feature-grid">
+      <div className="grid grid-cols-4 gap-6 w-full 
+                xl:grid-cols-4 
+                lg:grid-cols-3 
+                md:grid-cols-2 
+                sm:grid-cols-1">
         {features.map((feature, index) => (
           <div key={index} className="feature-card">
             <div className="feature-header">

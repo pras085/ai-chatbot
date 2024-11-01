@@ -106,11 +106,14 @@ function ChatListPage() {
   // console.log('Current context:', contexts);
 
   return (
-    <div className="flex h-screen justify-end overflow-hidden">
-      <div className={`flex-1 max-w-2xl p-5 pt-10 transition-all duration-300 ease-in-out ${!showProductInfo ? 'max-w-full justify-center flex' : ''}`}>
-        {activeFeature.includes("CODE_CHECK") && <CodeCheckDetail feature={activeFeature}/>}
-      </div>
-      <div className={`flex-1 max-w-2xl p-5 transition-all duration-300 ease-in-out ${!showProductInfo ? 'max-w-full justify-center flex' : ''}`}>
+    <div className="flex h-screen justify-between overflow-hidden">
+      {activeFeature.includes("CODE_CHECK") && 
+        <div className={`flex-1 max-w-full p-5 pt-10 transition-all duration-300 ease-in-out ${!showProductInfo ? 'max-w-full justify-center flex' : ''}`}>
+          <CodeCheckDetail feature={activeFeature} />
+        </div>
+      }
+
+      <div className={`flex-1 max-w-full p-5 transition-all duration-300 ease-in-out ${!showProductInfo ? 'max-w-full justify-center flex' : ''}`}>
         <ChatList
           chats={chats}
           onSelectChat={handleSelectChat}
@@ -119,23 +122,25 @@ function ChatListPage() {
           userId={user.id}
         />
       </div>
-      <div className={`relative transition-all duration-300 ease-in-out ${showProductInfo ? 'w-96' : 'w-0'} flex-none`}>
-        <button
-          className="absolute top-1/2 left-[-50px] transform -translate-y-1/2 bg-blue-500 text-white w-12 h-12 rounded-full flex items-center justify-center z-10 transition-all duration-300 ease-in-out"
-          onClick={() => setShowProductInfo(!showProductInfo)}
-        >
-          <FontAwesomeIcon icon={showProductInfo ? faChevronRight : faChevronLeft} />
-        </button>
-        <div className={`h-full w-96 p-5 bg-white shadow-md overflow-y-auto transition-transform duration-300 ease-in-out ${showProductInfo ? '' : 'translate-x-full'}`}>
-          {activeFeature === "GENERAL" && (
+      
+      {activeFeature == "GENERAL" &&
+        <div className={`relative transition-all duration-300 ease-in-out ${showProductInfo ? 'w-96' : 'w-0'} flex-none`}>
+          {/* <button
+            className="absolute top-1/2 left-[-50px] transform -translate-y-1/2 bg-blue-500 text-white w-12 h-12 rounded-full flex items-center justify-center z-10 transition-all duration-300 ease-in-out"
+            onClick={() => setShowProductInfo(!showProductInfo)}
+            >
+            <FontAwesomeIcon icon={showProductInfo ? faChevronRight : faChevronLeft} />
+          </button> */}
+          <div className={`h-full w-96 p-5 bg-white shadow-md overflow-y-auto transition-transform duration-300 ease-in-out ${showProductInfo ? '' : 'translate-x-full'}`}>
             <ProductInformation
               contexts={contexts}
               onContextUpdate={handleContextUpdate}
               onContextDelete={handleDeleteContext}
             />
-          )}
+          </div>
         </div>
-      </div>
+      }
+
     </div>
   );
 }

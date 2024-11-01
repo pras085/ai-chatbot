@@ -36,7 +36,7 @@ const ChatList = ({ chats, onSelectChat, onNewChat, onDeleteChat, userId }) => {
 
   return (
     <div className="flex flex-col h-screen justify-end overflow-hidden">
-      <div className="flex-1 max-w-3xl p-5 overflow-y-auto transition-all duration-300 ease-in-out">
+      <div className="flex-1 max-w-full p-5 overflow-y-auto transition-all duration-300 ease-in-out">
         <button
           className="w-full py-2 px-5 bg-blue-500 text-white border-none rounded cursor-pointer hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed"
           onClick={handleCreateNewChat}
@@ -66,13 +66,25 @@ const ChatList = ({ chats, onSelectChat, onNewChat, onDeleteChat, userId }) => {
                 </div>
               </div>
               <button
-                className="py-1 px-2.5 bg-red-500 text-white border-none rounded cursor-pointer hover:bg-red-600"
+                className="w-6 h-6 flex items-center justify-center text-red-500 hover:bg-red-100 rounded-full transition-colors duration-200"
                 onClick={(e) => {
                   e.stopPropagation();
                   handleDeleteChat(chat.chat_id);
                 }}
+                aria-label="Delete chat"
               >
-                Delete
+                <svg 
+                  xmlns="http://www.w3.org/2000/svg" 
+                  className="h-5 w-5" 
+                  viewBox="0 0 20 20" 
+                  fill="currentColor"
+                >
+                  <path 
+                    fillRule="evenodd" 
+                    d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" 
+                    clipRule="evenodd" 
+                  />
+                </svg>
               </button>
             </li>
           ))}

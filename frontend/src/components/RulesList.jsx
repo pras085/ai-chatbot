@@ -96,8 +96,8 @@ const RulesList = ({ data = [] }) => {
                     <tr key={rules.id}>
                         <td className="border border-gray-300 px-4 py-2 text-center">{no + 1}</td>
                         <td className="border border-gray-300 px-4 py-2 text-left">{rules.feature}</td>
-                        <td className="border border-gray-300 px-4 py-2">{rules.created_at}</td>
-                        <td className="border border-gray-300 px-4 py-2">{rules.updated_at}</td>
+                        <td className="border border-gray-300 px-4 py-2">{new Date(rules.created_at).toLocaleString()}</td>
+                        <td className="border border-gray-300 px-4 py-2">{new Date(rules.updated_at).toLocaleString()}</td>
                         <td className="border border-gray-300 px-4 py-2">
                             <div style={{ display: 'flex' , flexDirection: 'row'}}>
                                 <button className="bg-blue-500 text-white px-4 py-1 rounded mr-2" onClick={() => handleEdit(rules.rule, rules.feature)}>Edit</button>

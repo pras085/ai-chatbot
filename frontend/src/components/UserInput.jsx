@@ -7,6 +7,7 @@ import {
   faFile,
   faRemove,
   faSpinner,
+  faFolder
 } from "@fortawesome/free-solid-svg-icons";
 import { formatFileSize } from "../utils/helpers";
 
@@ -99,6 +100,14 @@ function UserInput({
         data-tooltip="Upload docs/image"
       >
         <FontAwesomeIcon icon={faPaperclip} />
+      </button>
+      <button
+        type="button"
+        id="attach-button"
+        onClick={() => document.getElementById("folder-input").click()}
+        data-tooltip="Upload Folder"
+      >
+        <FontAwesomeIcon icon={faFolder} />
       </button>
       <button
         id="send-button"

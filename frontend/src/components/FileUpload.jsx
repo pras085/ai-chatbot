@@ -2,7 +2,7 @@ import React from "react";
 import { isAllowedFileType, allowedExtensions } from "../utils/helpers";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB in bytes
-const MAX_FILE_COUNT = 5; // Maksimal 5 file
+const MAX_FILE_COUNT = 50; // Maksimal 5 file
 
 /**
  * FileUpload Component
@@ -49,14 +49,26 @@ function FileUpload({ onFileUpload, currentFiles }) {
   };
 
   return (
-    <input
-      type="file"
-      id="file-input"
-      style={{ display: "none" }}
-      onChange={handleFileChange}
-      multiple
-      accept={allowedExtensions.toString()}
-    />
+    <>
+      <input
+        type="file"
+        id="file-input"
+        style={{ display: "none" }}
+        onChange={handleFileChange}
+        multiple
+        accept={allowedExtensions.toString()}
+      />
+      <input
+        type="file"
+        id="folder-input"
+        style={{ display: "none" }}
+        onChange={handleFileChange}
+        multiple
+        accept={allowedExtensions.toString()}
+        webkitdirectory=""
+        directory=""
+      />
+    </>
   );
 }
 

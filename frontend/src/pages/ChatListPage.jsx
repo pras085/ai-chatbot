@@ -106,7 +106,7 @@ function ChatListPage() {
   // console.log('Current context:', contexts);
 
   return (
-    <div className="flex h-screen justify-between overflow-hidden">
+    <div className="flex h-[90vh] justify-between overflow-hidden">
       {activeFeature.includes("CODE_CHECK") && 
         <div className={`flex-1 max-w-full p-5 pt-10 transition-all duration-300 ease-in-out ${!showProductInfo ? 'max-w-full justify-center flex' : ''}`}>
           <CodeCheckDetail feature={activeFeature} />

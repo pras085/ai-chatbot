@@ -217,7 +217,7 @@ async def chat_with_retry_stream(
                         model=MODEL_NAME,
                         messages=messages,
                         system=system_message,
-                        max_tokens=1000,
+                        max_tokens=5000,
                         temperature=0,
                         stream=True,
                     )
@@ -284,7 +284,7 @@ def prepare_messages(chat_history, new_message, file_contents: Optional[List[Dic
             user_message_content.append(
                 {
                     "type": "text",
-                    "text": f"File: {file['name']}\nContent: {file['content'][:1000]}...",
+                    "text": f"File: {file['name']}\nContent: {file['content']}...",
                 }
             )
     messages.append({"role": "user", "content": user_message_content})

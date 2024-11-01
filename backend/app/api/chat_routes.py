@@ -18,6 +18,7 @@ from app.models.jwt import JwtUser
 from app.models.models import ChatFile
 from app.services import chat_service, prompt_service
 from app.services.auth_service import verify_token
+from app.utils.docx_utils import extract_text_from_docx
 from app.utils.feature_utils import Feature
 
 chat_routes = APIRouter()
@@ -89,17 +90,26 @@ async def send_chat_message(
         else:
             if files:
                 for file in files:
-                    content = await file.read()
-                    file_contents.append(
-                        {
-                            "name": file.filename,
-                            "content": content.decode("utf-8", errors="ignore"),
-                        }
-                    )
-                    # Simpan file jika diperlukan
-                    # file_path = await save_uploaded_file(file)
-                    # chat_manager.add_file_to_chat(db, chat_id, file.filename, file_path)
-
+                    if file.filename.__contains__(".docx"):
+                        content = extract_text_from_docx(file.file)
+                        file_contents.append(
+                            {
+                                "name": file.filename,
+                                "content": content,
+                            }
+                        )
+                    else:
+                        await file.seek(0)
+                        content = await file.read()
+                        file_contents.append(
+                            {
+                                "name": file.filename,
+                                "content": content.decode("utf-8", errors="ignore"),
+                            }
+                        )
+                        # Simpan file jika diperlukan
+                        # file_path = await save_uploaded_file(file)
+                        # chat_manager.add_file_to_chat(db, chat_id, file.filename, file_path)
         return await prompt_service.process_chat_message(
             db,
             current_user.id,

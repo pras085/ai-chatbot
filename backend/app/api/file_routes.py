@@ -4,6 +4,8 @@ from typing import List
 from fastapi import APIRouter, UploadFile, File
 from zipfile import ZipFile
 
+from app.utils.docx_utils import extract_text_from_docx
+
 file_routes = APIRouter()
 
 
@@ -33,3 +35,13 @@ async def upload_files(
 
     print(files)
     pprint(file_contents)
+
+
+@file_routes.post("/documents")
+async def upload_documents(
+    files: List[UploadFile] = File(...),  # Banyak file
+):
+    # Ekstrak teks from docx
+    text_content = extract_text_from_docx(files[0].file)
+    print(text_content)
+

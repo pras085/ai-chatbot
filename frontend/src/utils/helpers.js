@@ -59,6 +59,8 @@ export const allowedExtensions = [
   "dart",
   // Compressed zip
   "zip",
+  // Document
+  "docx",
 ];
 
 export function isAllowedFileType(file) {
@@ -80,6 +82,10 @@ export function isAllowedFileType(file) {
     "text/x-c++src",
     // zip
     "application/zip",
+    // document
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   ];
 
   const fileExtension = file.name.split(".").pop().toLowerCase();

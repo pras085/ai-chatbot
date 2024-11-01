@@ -8,6 +8,7 @@ class Feature(Enum):
     CODE_CHECK_FRONTEND = 'CODE_CHECK_FRONTEND'
     CODE_CHECK_BACKEND = 'CODE_CHECK_BACKEND'
     CODE_CHECK_APPS = 'CODE_CHECK_APPS'
+    DOCUMENT_CHECKING = 'DOCUMENT_CHECKING'
 
     @classmethod
     def from_string(cls, feature_string: str):

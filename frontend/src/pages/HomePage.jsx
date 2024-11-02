@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -10,23 +10,20 @@ import {
   faFile,
   faGear,
   faSpellCheck,
+  faFolder,
 } from "@fortawesome/free-solid-svg-icons";
 import "../styles/HomePage.css";
 import { ReactComponent as MuatmuatIcon } from "../assets/logo-muatmuat.svg";
 import { apiRequest } from "../services/api";
 import { useFeature } from "../contexts/FeatureContext";
+import FileUpload from "../components/FileUpload";
+import ModalUpload from "../components/ModalUpload";
 
-const Greeting = ({ name = "User" }) => {
-  return (
-    <header style={{padding: '10px', textAlign: 'center'}}>
-      <h1 style={{color: '#333', fontSize: '24px', margin: '0'}}>Selamat Datang, {name}!</h1>
-    </header>
-  );
-};
-
+;
 const HomePage = () => {
   const navigate = useNavigate();
   const { setActiveFeature } = useFeature();
+  const [showModal, setShowModal] = useState(false);
 
   const features = [
     {
@@ -54,42 +51,32 @@ const HomePage = () => {
       featureType: "CS_CHATBOT",
     },{
       title: "Document Checking",
-      description: "Membantu untuk melakukan review dokumen.",
+      description: "Membantu proses review dokumen.",
       icon: <FontAwesomeIcon icon={faFile} size="2x" className="feature-icon" />,
       featureType: "DOCUMENT_CHECKING",
     },
     ,{
       title: "Quick Code Checking",
-      description: "Membantu untuk melakukan review dokumen.",
+      description: "Pilih dan periksa code langsung.",
       icon: <FontAwesomeIcon icon={faSpellCheck} size="2x" className="feature-icon" />,
       featureType: "CODE_CHECK",
+      quick: true,
     },
   ];
 
-  const handleFeatureClick = (featureType) => {
+  const handleFeatureClick = (featureType, quick) => {
     setActiveFeature(featureType);
-    navigate("/chats");  // Arahkan ke halaman daftar chat
-  };
-
-  const handleLogout = async () => {
-    try {
-      await apiRequest("/logout", { method: "POST" });
-      localStorage.removeItem("token");
-      localStorage.removeItem("username");
-      navigate("/login");
-    } catch (error) {
-      console.error("Logout failed:", error);
-      localStorage.removeItem("token");
-      localStorage.removeItem("username");
-      navigate("/login");
+    if (quick) {
+      setShowModal(true);
+    }
+    else {
+      navigate("/chats");  // Arahkan ke halaman daftar chat
     }
   };
 
-  const handleSettigsClick = () => {
-    navigate("/admin");
-  }
-
   return (
+    <>
+    <ModalUpload isOpen={showModal} onClose={() => setShowModal(false)}/>
     <div className="home-container">
       <div className="header">
         {/* <MuatmuatIcon className="home-title" /> */}
@@ -125,32 +112,35 @@ const HomePage = () => {
                 </button> 
               )}
               {feature.featureType === "CODE_CHECK" && (
-                <div className="feature-buttons-container">
-                  <button
-                    onClick={() => handleFeatureClick("CODE_CHECK_FRONTEND")}
-                    className="feature-button"
-                  >
-                    Frontend
-                  </button>
-                  <button
-                    onClick={() => handleFeatureClick("CODE_CHECK_BACKEND")}
-                    className="feature-button"
-                  >
-                    Backend
-                  </button>
-                  <button
-                    onClick={() => handleFeatureClick("CODE_CHECK_APPS")}
-                    className="feature-button"
-                  >
-                    Apps
-                  </button>
-                </div>
+                <>
+                  <div className="feature-buttons-container">
+                    <button
+                      onClick={() => handleFeatureClick("CODE_CHECK_FRONTEND", feature.quick)}
+                      className="feature-button"
+                    >
+                      Frontend
+                    </button>
+                    <button
+                      onClick={() => handleFeatureClick("CODE_CHECK_BACKEND", feature.quick)}
+                      className="feature-button"
+                    >
+                      Backend
+                    </button>
+                    <button
+                      onClick={() => handleFeatureClick("CODE_CHECK_APPS", feature.quick)}
+                      className="feature-button"
+                    >
+                      Apps
+                    </button>
+                  </div>
+                </>
               )}
             </div>
           </div>
         ))}
       </div>
     </div>
+    </>
   );
 };
 

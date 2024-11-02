@@ -5,8 +5,6 @@ import { deleteContext, deleteChat, getContext, uploadContext, createNewChat } f
 import useUser from "../hooks/useUser";
 import { useChats } from "../hooks/useChats";
 import ProductInformation from "../components/ProductInformation";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faChevronLeft, faChevronRight } from "@fortawesome/free-solid-svg-icons";
 import { useFeature } from '../contexts/FeatureContext';
 import CodeCheckDetail from "../components/CodeCheckDetail";
 

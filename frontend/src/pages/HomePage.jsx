@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -12,12 +12,24 @@ import {
 import "../styles/HomePage.css";
 import { useFeature } from "../contexts/FeatureContext";
 import ModalUpload from "../components/ModalUpload";
+import { createNewChat } from "../services/api";
+import { useUser } from "../hooks/useUser";
+import { sendChatMessage } from "../services/api";
+import LoadingOverlay from "../components/LoadingOverlay";
 
-;
 const HomePage = () => {
   const navigate = useNavigate();
   const { setActiveFeature } = useFeature();
+  const { activeFeature } = useFeature();
   const [showModal, setShowModal] = useState(false);
+  const [currentFiles, setCurrentFiles] = useState([]);
+  const { user } = useUser();
+  const [isGenerating, setIsGenerating] = useState(false);
+  const abortControllerRef = useRef(null);
+  const [messages, setMessages] = useState([]);
+
+
+
 
   const features = [
     {
@@ -68,22 +80,73 @@ const HomePage = () => {
     }
   };
 
+  const handleQuicCodeCheck = async () => {
+    // create new chat
+    const newChat = await createNewChat(user.id, activeFeature);
+    const chatId = newChat.id;
+    const message = "Periksa kode pada file berikut ini";
+
+    setIsGenerating(true);
+    const newMessage = { content: message, type: "user-message" };
+    setMessages(prevMessages => [...prevMessages, newMessage]);
+
+    abortControllerRef.current = new AbortController();
+
+    try {
+      await sendChatMessage(
+        user.id,
+        chatId,
+        message,
+        currentFiles,
+        abortControllerRef.current.signal,
+        (chunk) => {
+          setMessages(prevMessages => {
+            const lastMessage = prevMessages[prevMessages.length - 1];
+            if (lastMessage.type === "bot-message") {
+              return [
+                ...prevMessages.slice(0, -1),
+                { ...lastMessage, content: lastMessage.content + chunk }
+              ];
+            } else {
+              return [...prevMessages, { content: chunk, type: "bot-message" }];
+            }
+          });
+        },
+        () => {
+          setIsGenerating(false);
+          setCurrentFiles([]);  // Clear the current files after sending
+        },
+        (error) => {
+          console.error("Error in chat:", error);
+          setMessages(prevMessages => [
+            ...prevMessages,
+            { content: "An error occurred. Please try again.", type: "bot-message" }
+          ]);
+          setIsGenerating(false);
+        },
+        activeFeature
+      );
+    } catch (error) {
+      console.error("Failed to send message:", error);
+      setIsGenerating(false);
+    }
+  
+    // navigate to new chat
+    navigate(`/chat/${chatId}`);
+    setShowModal(false);
+  };
+
   return (
     <>
-    <ModalUpload isOpen={showModal} onClose={() => setShowModal(false)}/>
+    <LoadingOverlay isLoading={isGenerating} />
+    <ModalUpload 
+      isOpen={showModal} 
+      onClose={() => setShowModal(false)} 
+      files={currentFiles} 
+      setFiles={setCurrentFiles}
+      process={handleQuicCodeCheck}
+    />
     <div className="home-container">
-      <div className="header">
-        {/* <MuatmuatIcon className="home-title" /> */}
-        {/* {
-          localStorage.getItem("username") === "superadmin" && 
-          <button onClick={handleSettigsClick} >
-            <FontAwesomeIcon icon={faGear} /> Setting
-          </button>
-        } */}
-        {/* <button onClick={handleLogout} className="logout-button">
-          <FontAwesomeIcon icon={faSignOutAlt} /> Logout
-        </button> */}
-      </div>
       <div className="grid grid-cols-4 gap-6 w-full 
                 xl:grid-cols-4 
                 lg:grid-cols-3 

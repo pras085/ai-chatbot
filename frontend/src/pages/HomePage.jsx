@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -6,17 +6,11 @@ import {
   faCode,
   faCheck,
   faHeadset,
-  faSignOutAlt,
   faFile,
-  faGear,
   faSpellCheck,
-  faFolder,
 } from "@fortawesome/free-solid-svg-icons";
 import "../styles/HomePage.css";
-import { ReactComponent as MuatmuatIcon } from "../assets/logo-muatmuat.svg";
-import { apiRequest } from "../services/api";
 import { useFeature } from "../contexts/FeatureContext";
-import FileUpload from "../components/FileUpload";
 import ModalUpload from "../components/ModalUpload";
 
 ;

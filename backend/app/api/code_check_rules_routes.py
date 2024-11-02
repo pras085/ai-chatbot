@@ -54,4 +54,9 @@ async def update_code_check_rules(
 ):
     return await code_check_rules_service.update_rules(db, feature, req_body.rule)
 
-
+@code_check_rules_routes.get("/code-check-rules/x/init")
+async def init_code_check_rules(
+    current_user: JwtUser = Depends(verify_token),
+    db: Session = Depends(get_db)
+):
+    return await code_check_rules_service.init_rules(db)

@@ -29,3 +29,8 @@ async def update_rules(db: Session, feature: Feature, rules: str) -> bool:
 
 async def delete_rules(db: Session, feature: Feature) -> bool:
     return code_rules_manager.delete_rules(db, feature)
+
+async def init_rules(db: Session) -> bool:
+    for feature in Feature:
+        await add_rules(db, "", feature)
+    return True

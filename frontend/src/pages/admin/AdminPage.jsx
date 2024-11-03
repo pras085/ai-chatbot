@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
-import RulesList from "../components/RulesList";
-import { fetchAllRules, fetchAllKnowledges } from "../services/api";
-import KnowledgeBaseList from "../components/KnowledgeBaseList";
+import RulesList from "../../components/RulesList";
+import { fetchAllRules, fetchAllKnowledges } from "../../services/api";
+import KnowledgeBaseList from "../../components/KnowledgeBaseList";
 import { useNavigate } from "react-router-dom";
 
 

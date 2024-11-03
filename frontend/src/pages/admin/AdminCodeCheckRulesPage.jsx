@@ -1,6 +1,6 @@
-import Sidebar from "../components/Sidebar";
+import Sidebar from "../../components/Sidebar";
 
-function AdminUserManagementPage() {
+function AdminCodeCheckRulesPage() {
     return (
         <>
             <div className="flex h-[90vh]">
@@ -8,11 +8,11 @@ function AdminUserManagementPage() {
 
                 {/* Main Content */}
                 <main className="flex-1 p-6">
-                    <h1 className="text-2xl mb-4">Admin User Management Base Page</h1>
+                    <h1 className="text-2xl mb-4">Admin Code Check Rules</h1>
                 </main>
             </div>
         </>
     )
 };
 
-export default AdminUserManagementPage;
+export default AdminCodeCheckRulesPage;

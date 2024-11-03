@@ -1,6 +1,6 @@
-import Sidebar from "../components/Sidebar";
+import Sidebar from "../../components/Sidebar";
 
-function AdminKnowledgeBasePage() {
+function AdminLogsPage() {
     return (
         <>
             <div className="flex h-[90vh]">
@@ -8,11 +8,11 @@ function AdminKnowledgeBasePage() {
 
                 {/* Main Content */}
                 <main className="flex-1 p-6">
-                    <h1 className="text-2xl mb-4">Admin Knowledge Base Page</h1>
+                    <h1 className="text-2xl mb-4">Admin Logs Page</h1>
                 </main>
             </div>
         </>
     )
 };
 
-export default AdminKnowledgeBasePage;
+export default AdminLogsPage;

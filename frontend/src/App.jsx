@@ -7,11 +7,11 @@ import "./styles/App.css";
 import "highlight.js/styles/sunburst.css";
 import NavigationBar from "./components/Navbar";
 
-const AdminPage = lazy(() => import("./pages/AdminPage"));
-const AdminCodeCheckRulesPage = lazy(() => import("./pages/AdminCodeCheckRulesPage"));
-const AdminKnowledgeBasePage = lazy(() => import("./pages/AdminKnowledgeBasePage"));
-const AdminUserManagementPage = lazy(() => import("./pages/AdminUserManagementPage"));
-const AdminLogsPage = lazy(() => import("./pages/AdminLogsPage"));
+const AdminPage = lazy(() => import("./pages/admin/AdminPage"));
+const AdminCodeCheckRulesPage = lazy(() => import("./pages/admin/AdminCodeCheckRulesPage"));
+const AdminKnowledgeBasePage = lazy(() => import("./pages/admin/AdminKnowledgeBasePage"));
+const AdminUserManagementPage = lazy(() => import("./pages/admin/AdminUserManagementPage"));
+const AdminLogsPage = lazy(() => import("./pages/admin/AdminLogsPage"));
 const LoginPage = lazy(() => import("./pages/LoginPage"));
 const HomePage = lazy(() => import("./pages/HomePage"));
 const ChatListPage = lazy(() => import("./pages/ChatListPage"));

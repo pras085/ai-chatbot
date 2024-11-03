@@ -1,6 +1,6 @@
-import Sidebar from "../components/Sidebar";
+import Sidebar from "../../components/Sidebar";
 
-function AdminLogsPage() {
+function AdminUserManagementPage() {
     return (
         <>
             <div className="flex h-[90vh]">
@@ -8,11 +8,11 @@ function AdminLogsPage() {
 
                 {/* Main Content */}
                 <main className="flex-1 p-6">
-                    <h1 className="text-2xl mb-4">Admin Logs Page</h1>
+                    <h1 className="text-2xl mb-4">Admin User Management Base Page</h1>
                 </main>
             </div>
         </>
     )
 };
 
-export default AdminLogsPage;
+export default AdminUserManagementPage;

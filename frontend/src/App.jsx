@@ -10,6 +10,8 @@ import NavigationBar from "./components/Navbar";
 const AdminPage = lazy(() => import("./pages/AdminPage"));
 const AdminCodeCheckRulesPage = lazy(() => import("./pages/AdminCodeCheckRulesPage"));
 const AdminKnowledgeBasePage = lazy(() => import("./pages/AdminKnowledgeBasePage"));
+const AdminUserManagementPage = lazy(() => import("./pages/AdminUserManagementPage"));
+const AdminLogsPage = lazy(() => import("./pages/AdminLogsPage"));
 const LoginPage = lazy(() => import("./pages/LoginPage"));
 const HomePage = lazy(() => import("./pages/HomePage"));
 const ChatListPage = lazy(() => import("./pages/ChatListPage"));
@@ -86,6 +88,16 @@ function App() {
                   <Route path="/admin/knowledge-base" element={
                     <PrivateRoute>
                       <AdminKnowledgeBasePage />
+                    </PrivateRoute>
+                  } />
+                  <Route path="/admin/user-management" element={
+                    <PrivateRoute>
+                      <AdminUserManagementPage />
+                    </PrivateRoute>
+                  } />
+                  <Route path="/admin/logs" element={
+                    <PrivateRoute>
+                      <AdminLogsPage />
                     </PrivateRoute>
                   } />
                   <Route path="/" element={<Navigate to="/home" replace />} />

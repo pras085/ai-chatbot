@@ -8,6 +8,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const MenuItem = ({ icon: Icon, label, isCollapsed, isActive, onClick }) => (
   <button
@@ -27,13 +28,13 @@ const MenuItem = ({ icon: Icon, label, isCollapsed, isActive, onClick }) => (
   </button>
 );
 
-const Sidebar = ({ onNavigate }) => {
+const Sidebar = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [activeItem, setActiveItem] = useState('knowledge-base');
+  const path = window.location.pathname;
+  const navigate = useNavigate();
 
-  const handleItemClick = (itemId) => {
-    setActiveItem(itemId);
-    onNavigate?.(itemId);
+  const handleMenuItemClick = (id) => {
+    navigate(`/admin/${id}`);
   };
 
   const menuItems = [
@@ -62,7 +63,7 @@ const Sidebar = ({ onNavigate }) => {
   return (
     <div 
       className={`
-        h-screen bg-white border-r border-gray-200 transition-all duration-300
+        h-full bg-white border-r border-gray-200 transition-all duration-300
         ${isCollapsed ? 'w-16' : 'w-64'}
       `}
     >
@@ -93,8 +94,8 @@ const Sidebar = ({ onNavigate }) => {
             icon={item.icon}
             label={item.label}
             isCollapsed={isCollapsed}
-            isActive={activeItem === item.id}
-            onClick={() => handleItemClick(item.id)}
+            isActive={path.split('/')[2] === item.id}
+            onClick={() => handleMenuItemClick(item.id)}
           />
         ))}
       </div>

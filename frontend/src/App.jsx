@@ -5,10 +5,11 @@ import useUser from './hooks/useUser';
 import { FeatureProvider } from "./contexts/FeatureContext";
 import "./styles/App.css";
 import "highlight.js/styles/sunburst.css";
-import AdminPage from "./pages/AdminPage";
-import FloatingHomeButton from "./components/FloatingHomeButton";
 import NavigationBar from "./components/Navbar";
 
+const AdminPage = lazy(() => import("./pages/AdminPage"));
+const AdminCodeCheckRulesPage = lazy(() => import("./pages/AdminCodeCheckRulesPage"));
+const AdminKnowledgeBasePage = lazy(() => import("./pages/AdminKnowledgeBasePage"));
 const LoginPage = lazy(() => import("./pages/LoginPage"));
 const HomePage = lazy(() => import("./pages/HomePage"));
 const ChatListPage = lazy(() => import("./pages/ChatListPage"));
@@ -75,6 +76,16 @@ function App() {
                   <Route path="/admin" element={
                     <PrivateRoute>
                       <AdminPage />
+                    </PrivateRoute>
+                  } />
+                  <Route path="/admin/rules" element={
+                    <PrivateRoute>
+                      <AdminCodeCheckRulesPage />
+                    </PrivateRoute>
+                  } />
+                  <Route path="/admin/knowledge-base" element={
+                    <PrivateRoute>
+                      <AdminKnowledgeBasePage />
                     </PrivateRoute>
                   } />
                   <Route path="/" element={<Navigate to="/home" replace />} />

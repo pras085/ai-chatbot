@@ -35,7 +35,7 @@ function AdminCodeCheckRulesPage() {
                 <Sidebar />
                 {/* Main Content */}
                 <main className="flex-1 p-6">
-                    <h1 className="text-2xl mb-4">Admin Code Check Rules</h1>
+                    <h1 className="text-2xl mb-4 ml-6">Admin Code Check Rules</h1>
                     <RulesList data={rules}/>
                 </main>
             </div>
